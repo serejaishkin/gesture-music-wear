@@ -1,0 +1,10 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color white
+drawable ic_music_note
+drawable ic_stop
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+style Theme.GestureMusic

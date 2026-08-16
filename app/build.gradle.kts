@@ -32,12 +32,17 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    // Kotlin 2.0: вместо kotlinOptions используем compilerOptions
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
     buildFeatures {
         compose = true
     }
+    // УБРАНО: composeOptions { kotlinCompilerExtensionVersion } 
+    // С Kotlin 2.0 и плагином kotlin-compose он не нужен!
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

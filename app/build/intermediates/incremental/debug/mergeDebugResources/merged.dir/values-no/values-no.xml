@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="horologist_split_toggle_chip_off_state_description">Av</string>
+    <string name="horologist_split_toggle_chip_on_state_description">På</string>
+    <string name="horologist_stepper_decrease_content_description">Reduser</string>
+    <string name="horologist_stepper_increase_content_description">Øk</string>
+    <string name="horologist_toggle_button_off_state_description">Av</string>
+    <string name="horologist_toggle_button_on_state_description">På</string>
+    <string name="horologist_toggle_chip_off_state_description">Av</string>
+    <string name="horologist_toggle_chip_on_state_description">På</string>
+</resources>

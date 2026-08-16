@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-66:/values-night-v8/values-night-v8.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\sergejj\\.gradle\\caches\\8.9\\transforms\\9e289b78e469453da9daab0d199aa0d1\\transformed\\core-splashscreen-1.0.1\\res\\values-night-v8\\values-night-v8.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "85",
+                        "endOffsets": "136"
+                    }
+                }
+            ]
+        }
+    ]
+}

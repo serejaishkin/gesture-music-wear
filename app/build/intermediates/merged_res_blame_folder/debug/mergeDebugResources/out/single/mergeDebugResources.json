@@ -1,0 +1,50 @@
+[
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/drawable_ic_music_note.xml.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/drawable/ic_music_note.xml"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/drawable_ic_stop.xml.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/drawable/ic_stop.xml"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.yourname.gesturemusic.app-debug-68:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.yourname.gesturemusic.app-main-70:/mipmap-xxxhdpi/ic_launcher_round.png"
+    }
+]
