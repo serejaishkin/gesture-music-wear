@@ -32,7 +32,6 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 class GestureMusicService : Service(), SensorEventListener {
-
     companion object {
         private const val TAG = "GestureMusicService"
         private const val CHANNEL_ID = "gesture_music_channel"
@@ -49,13 +48,14 @@ class GestureMusicService : Service(), SensorEventListener {
         const val ACTION_CLEAR_TRAINING = "com.yourname.gesturemusic.ACTION_CLEAR_TRAINING"
         const val EXTRA_ANGLE_THRESHOLD = "angle_threshold"
         const val EXTRA_PINCH_THRESHOLD = "pinch_threshold"
+        const val EXTRA_COOLDOWN = "gesture_cooldown"
+        const val EXTRA_LEFT_HAND = "left_hand"
         const val EXTRA_TRAINING_GESTURE = "training_gesture"
     }
 
     private lateinit var sensorManager: SensorManager
     private var gyroscope: Sensor? = null
     private var linearAccel: Sensor? = null
-
     private lateinit var mediaControllerManager: MediaControllerManager
     private lateinit var wristDetector: WristRotationDetector
     private lateinit var pinchDetector: DoublePinchDetector
@@ -69,14 +69,10 @@ class GestureMusicService : Service(), SensorEventListener {
     private var lastSensorTimestamp = 0L
     private var lastGestureTime = 0L
     private var screenOffTime = -1L
-
-    // !!! Режим обучения
     private var isTrainingMode = false
     private var trainingGestureType: GestureType? = null
-
     private var idleExecutor: ScheduledExecutorService? = null
     private var idleTask: java.util.concurrent.ScheduledFuture<*>? = null
-
     private var lastGyroX = 0f
     private var lastGyroY = 0f
     private var lastGyroZ = 0f
@@ -101,33 +97,23 @@ class GestureMusicService : Service(), SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "onCreate")
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         linearAccel = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
-
         mediaControllerManager = MediaControllerManager(this)
         wristDetector = WristRotationDetector()
         pinchDetector = DoublePinchDetector()
         gestureTrainer = GestureTrainer(this)
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK,
-            "GestureMusic::WakeLock"
-        )
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GestureMusic::WakeLock")
         wakeLock.setReferenceCounted(false)
-
         vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         notificationManager = getSystemService(NotificationManager::class.java)
 
         mediaControllerManager.setStateListener { playing ->
             isMusicPlaying = playing
-            if (playing) {
-                cancelIdleTimer()
-            } else {
-                startIdleTimer()
-            }
+            if (playing) cancelIdleTimer() else startIdleTimer()
         }
 
         val screenFilter = IntentFilter().apply {
@@ -139,12 +125,10 @@ class GestureMusicService : Service(), SensorEventListener {
         } else {
             registerReceiver(screenStateReceiver, screenFilter)
         }
-
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand action=${intent?.action}")
         when (intent?.action) {
             ACTION_START -> startGestureDetection()
             ACTION_STOP -> stopGestureDetection()
@@ -159,20 +143,15 @@ class GestureMusicService : Service(), SensorEventListener {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        super.onDestroy()
-        Log.d(TAG, "onDestroy")
         stopGestureDetection()
         try { unregisterReceiver(screenStateReceiver) } catch (_: Exception) {}
         try { mediaControllerManager.disconnect() } catch (_: Exception) {}
         idleExecutor?.shutdown()
+        super.onDestroy()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.d(TAG, "onTaskRemoved — перезапускаем сервис")
-        val restartIntent = Intent(applicationContext, GestureMusicService::class.java).apply {
-            action = ACTION_START
-        }
-        startService(restartIntent)
+        startService(Intent(applicationContext, GestureMusicService::class.java).apply { action = ACTION_START })
         super.onTaskRemoved(rootIntent)
     }
 
@@ -180,7 +159,6 @@ class GestureMusicService : Service(), SensorEventListener {
         event ?: return
         val timestamp = System.currentTimeMillis()
         lastSensorTimestamp = timestamp
-
         when (event.sensor.type) {
             Sensor.TYPE_GYROSCOPE -> {
                 lastGyroX = event.values[0]
@@ -191,16 +169,10 @@ class GestureMusicService : Service(), SensorEventListener {
                 lastLinAccX = event.values[0]
                 lastLinAccY = event.values[1]
                 lastLinAccZ = event.values[2]
-
-                // !!! Режим обучения
                 if (isTrainingMode) {
-                    gestureTrainer.addSample(lastGyroX, lastGyroY, lastGyroZ,
-                                             lastLinAccX, lastLinAccY, lastLinAccZ)
-                    // Вибрация прогресса записи
+                    gestureTrainer.addSample(lastGyroX, lastGyroY, lastGyroZ, lastLinAccX, lastLinAccY, lastLinAccZ)
                     val progress = gestureTrainer.getRecordingProgress()
-                    if (progress % 25 == 0 && progress > 0) {
-                        vibrateShort()
-                    }
+                    if (progress % 25 == 0 && progress > 0) vibrateShort()
                 } else {
                     processGestures(timestamp)
                 }
@@ -211,67 +183,43 @@ class GestureMusicService : Service(), SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     private fun processGestures(timestamp: Long) {
-        if (screenOffTime > 0 && timestamp - screenOffTime < SCREEN_OFF_BLOCK_MS) {
-            return
-        }
+        if (screenOffTime > 0 && timestamp - screenOffTime < SCREEN_OFF_BLOCK_MS) return
+        if (timestamp - lastGestureTime < GESTURE_COOLDOWN_MS) return
 
-        if (timestamp - lastGestureTime < GESTURE_COOLDOWN_MS) {
-            return
-        }
-
-        // !!! Сначала пробуем обученные жесты
         val trainedGesture = gestureTrainer.recognize(
             lastGyroX, lastGyroY, lastGyroZ,
             lastLinAccX, lastLinAccY, lastLinAccZ
         )
-
         val gesture = trainedGesture ?: run {
-            // Fallback на классические детекторы
             val wristGesture = wristDetector.process(
-                timestamp,
-                lastGyroX, lastGyroY, lastGyroZ,
+                timestamp, lastGyroX, lastGyroY, lastGyroZ,
                 lastLinAccX, lastLinAccY, lastLinAccZ
             )
             val pinchGesture = pinchDetector.process(
-                timestamp,
-                lastGyroX, lastGyroY, lastGyroZ,
+                timestamp, lastGyroX, lastGyroY, lastGyroZ,
                 lastLinAccX, lastLinAccY, lastLinAccZ
             )
             wristGesture ?: pinchGesture
         }
-
         gesture?.let { executeGesture(it, timestamp) }
     }
 
     private fun executeGesture(gesture: GestureType, timestamp: Long = System.currentTimeMillis()) {
         lastGestureTime = timestamp
-        Log.d(TAG, "=== Gesture detected: $gesture ===")
         vibrate()
-
         when (gesture) {
             GestureType.NEXT_TRACK -> mediaControllerManager.nextTrack()
             GestureType.PREVIOUS_TRACK -> mediaControllerManager.previousTrack()
             GestureType.PLAY_PAUSE -> mediaControllerManager.playPause()
         }
-
-        sendBroadcast(Intent("com.yourname.gesturemusic.GESTURE_DETECTED").apply {
-            putExtra("gesture", gesture.name)
-        })
+        sendBroadcast(Intent("com.yourname.gesturemusic.GESTURE_DETECTED").apply { putExtra("gesture", gesture.name) })
     }
-
-    // --- Training ---
 
     private fun startTraining(intent: Intent) {
         val gestureName = intent.getStringExtra(EXTRA_TRAINING_GESTURE) ?: return
-        trainingGestureType = try {
-            GestureType.valueOf(gestureName)
-        } catch (_: IllegalArgumentException) {
-            Log.e(TAG, "Unknown gesture type: $gestureName")
-            return
-        }
+        trainingGestureType = try { GestureType.valueOf(gestureName) } catch (_: IllegalArgumentException) { return }
         isTrainingMode = true
         gestureTrainer.startRecording()
-        Log.d(TAG, "Training started for: $trainingGestureType")
         vibrate()
     }
 
@@ -281,17 +229,11 @@ class GestureMusicService : Service(), SensorEventListener {
         val type = trainingGestureType ?: return
         val success = gestureTrainer.stopRecording(type)
         trainingGestureType = null
-        if (success) {
-            Log.d(TAG, "Training completed for: $type")
-            vibrateLong()
-        } else {
-            Log.w(TAG, "Training failed: too short")
-        }
+        if (success) vibrateLong()
     }
 
     private fun clearTraining() {
         gestureTrainer.clearAll()
-        Log.d(TAG, "All training data cleared")
     }
 
     private fun startGestureDetection() {
@@ -299,60 +241,43 @@ class GestureMusicService : Service(), SensorEventListener {
         isRunning = true
         lastGestureTime = 0L
         screenOffTime = -1L
-
-        try {
-            mediaControllerManager.connect()
-        } catch (e: Exception) {
-            Log.e(TAG, "MediaController connect failed", e)
-        }
-
-        gyroscope?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
-        linearAccel?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
-
-        if (!wakeLock.isHeld) {
-            wakeLock.acquire(10 * 60 * 1000L)
-        }
-
-        startForeground(NOTIFICATION_ID, buildNotification("Слушаю жесты запястья"))
-        Log.d(TAG, "Gesture detection started")
+        try { mediaControllerManager.connect() } catch (e: Exception) { Log.e(TAG, "MediaController connect failed", e) }
+        gyroscope?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        linearAccel?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        if (!wakeLock.isHeld) wakeLock.acquire(10 * 60 * 1000L)
+        startForeground(NOTIFICATION_ID, buildNotification())
     }
 
     private fun stopGestureDetection() {
         if (!isRunning) return
         isRunning = false
-
         sensorManager.unregisterListener(this)
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
-
+        if (wakeLock.isHeld) wakeLock.release()
         wristDetector.reset()
         pinchDetector.reset()
-
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-        Log.d(TAG, "Gesture detection stopped")
     }
 
     private fun updateSensitivity(intent: Intent) {
-        val angleThreshold = intent.getFloatExtra(EXTRA_ANGLE_THRESHOLD, 22f)
+        val angleThreshold = intent.getFloatExtra(EXTRA_ANGLE_THRESHOLD, 28f)
         val pinchThreshold = intent.getFloatExtra(EXTRA_PINCH_THRESHOLD, 3.0f)
+        val cooldown = intent.getLongExtra(EXTRA_COOLDOWN, 1200L)
+        val leftHand = intent.getBooleanExtra(EXTRA_LEFT_HAND, false)
 
-        wristDetector = WristRotationDetector(angleThresholdDegrees = angleThreshold)
+        wristDetector = WristRotationDetector(
+            angleThresholdDegrees = angleThreshold,
+            cooldownMs = cooldown,
+            leftHand = leftHand
+        )
         pinchDetector = DoublePinchDetector(thresholdUp = pinchThreshold)
-
-        Log.d(TAG, "Sensitivity updated: angle=$angleThreshold, pinch=$pinchThreshold")
+        Log.d(TAG, "Sensitivity updated: angle=$angleThreshold, pinch=$pinchThreshold, cooldown=$cooldown, leftHand=$leftHand")
     }
 
     private fun startIdleTimer() {
         cancelIdleTimer()
         idleExecutor = idleExecutor ?: Executors.newSingleThreadScheduledExecutor()
         idleTask = idleExecutor?.schedule({
-            Log.d(TAG, "Idle timeout reached, stopping sensors")
             runOnUiThread {
                 if (!isMusicPlaying) {
                     sensorManager.unregisterListener(this@GestureMusicService)
@@ -366,23 +291,13 @@ class GestureMusicService : Service(), SensorEventListener {
         idleTask?.cancel(false)
         idleTask = null
         if (!isRunning) return
-        gyroscope?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
-        linearAccel?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
-        if (!wakeLock.isHeld) {
-            wakeLock.acquire(10 * 60 * 1000L)
-        }
+        gyroscope?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        linearAccel?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        if (!wakeLock.isHeld) wakeLock.acquire(10 * 60 * 1000L)
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Gesture Music Control",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
+        val channel = NotificationChannel(CHANNEL_ID, "Gesture Music Control", NotificationManager.IMPORTANCE_LOW).apply {
             description = "Фоновое управление музыкой жестами"
             setShowBadge(false)
         }
@@ -390,18 +305,8 @@ class GestureMusicService : Service(), SensorEventListener {
     }
 
     private fun buildNotification(text: String = "Слушаю жесты запястья"): Notification {
-        val stopIntent = PendingIntent.getService(
-            this, 0,
-            Intent(this, GestureMusicService::class.java).apply { action = ACTION_STOP },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val contentIntent = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
+        val stopIntent = PendingIntent.getService(this, 0, Intent(this, GestureMusicService::class.java).apply { action = ACTION_STOP }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val contentIntent = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Gesture Music")
             .setContentText(text)
@@ -414,24 +319,15 @@ class GestureMusicService : Service(), SensorEventListener {
     }
 
     private fun vibrate() {
-        try {
-            val effect = VibrationEffect.createOneShot(50L, VibrationEffect.DEFAULT_AMPLITUDE)
-            vibrator.vibrate(effect)
-        } catch (_: Exception) {}
+        try { vibrator.vibrate(VibrationEffect.createOneShot(50L, VibrationEffect.DEFAULT_AMPLITUDE)) } catch (_: Exception) {}
     }
 
     private fun vibrateShort() {
-        try {
-            val effect = VibrationEffect.createOneShot(20L, VibrationEffect.DEFAULT_AMPLITUDE)
-            vibrator.vibrate(effect)
-        } catch (_: Exception) {}
+        try { vibrator.vibrate(VibrationEffect.createOneShot(20L, VibrationEffect.DEFAULT_AMPLITUDE)) } catch (_: Exception) {}
     }
 
     private fun vibrateLong() {
-        try {
-            val effect = VibrationEffect.createOneShot(200L, VibrationEffect.DEFAULT_AMPLITUDE)
-            vibrator.vibrate(effect)
-        } catch (_: Exception) {}
+        try { vibrator.vibrate(VibrationEffect.createOneShot(200L, VibrationEffect.DEFAULT_AMPLITUDE)) } catch (_: Exception) {}
     }
 
     private fun runOnUiThread(action: () -> Unit) {
