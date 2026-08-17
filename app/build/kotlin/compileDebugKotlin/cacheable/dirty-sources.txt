@@ -1,0 +1,17 @@
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\gesture\GestureType.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\media\MediaControllerManager.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\ui\theme\Theme.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\ui\screens\TrainingScreen.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\viewmodel\GestureViewModel.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\gesture\GestureDetector.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\data\SettingsRepository.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\gesture\DoublePinchDetector.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\service\MediaNotificationListener.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\ui\components\SensitivitySlider.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\GestureMusicApp.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\gesture\SmartPinchDetector.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\gesture\GestureTrainer.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\MainActivity.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\ui\screens\ControlScreen.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\gesture\WristRotationDetector.kt
+C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\java\com\yourname\gesturemusic\service\GestureMusicService.kt

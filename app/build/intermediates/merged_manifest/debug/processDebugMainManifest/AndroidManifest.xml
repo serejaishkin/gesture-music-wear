@@ -6,7 +6,7 @@
 
     <uses-sdk
         android:minSdkVersion="30"
-        android:targetSdkVersion="34" />
+        android:targetSdkVersion="35" />
 
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -71,15 +71,11 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
-        <uses-library
-            android:name="wear-sdk"
-            android:required="false" />
-
-        <activity
-            android:name="androidx.compose.ui.tooling.PreviewActivity"
-            android:exported="true" />
         <activity
             android:name="androidx.activity.ComponentActivity"
+            android:exported="true" />
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
             android:exported="true" />
 
         <provider
