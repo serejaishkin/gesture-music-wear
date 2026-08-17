@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-47:/values-km/values-km.xml",
+            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-48:/values-km/values-km.xml",
             "map": [
                 {
                     "source": "C:\\Users\\sergejj\\.gradle\\caches\\transforms-4\\3a1b8d6e1c9e5e71439e2f2013134663\\transformed\\ui-release\\res\\values-km\\values-km.xml",

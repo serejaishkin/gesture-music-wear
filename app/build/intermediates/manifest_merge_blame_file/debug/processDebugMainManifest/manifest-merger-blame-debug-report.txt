@@ -132,46 +132,46 @@
 72            android:foregroundServiceType="mediaPlayback" />
 72-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:51:13-58
 73
-74        <activity
-74-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:23:9-25:39
-75            android:name="androidx.activity.ComponentActivity"
-75-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:24:13-63
-76            android:exported="true" />
-76-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:25:13-36
-77        <activity
-77-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
-78            android:name="androidx.compose.ui.tooling.PreviewActivity"
-78-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
-79            android:exported="true" />
-79-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
-80
-81        <provider
-81-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
-82            android:name="androidx.startup.InitializationProvider"
-82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
-83            android:authorities="com.yourname.gesturemusic.androidx-startup"
-83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
-84            android:exported="false" >
-84-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
-85            <meta-data
-85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
-86                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-86-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
-87                android:value="androidx.startup" />
-87-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
-88            <meta-data
-88-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:29:13-31:52
-89                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-89-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:30:17-78
-90                android:value="androidx.startup" />
-90-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:31:17-49
-91            <meta-data
-91-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-92                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-92-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
-93                android:value="androidx.startup" />
-93-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-94        </provider>
+74        <provider
+74-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+75            android:name="androidx.startup.InitializationProvider"
+75-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+76            android:authorities="com.yourname.gesturemusic.androidx-startup"
+76-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+77            android:exported="false" >
+77-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+78            <meta-data
+78-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+79                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+79-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+80                android:value="androidx.startup" />
+80-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+81            <meta-data
+81-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:29:13-31:52
+82                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+82-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:30:17-78
+83                android:value="androidx.startup" />
+83-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:31:17-49
+84            <meta-data
+84-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+85                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+85-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+86                android:value="androidx.startup" />
+86-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+87        </provider>
+88
+89        <activity
+89-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:23:9-25:39
+90            android:name="androidx.activity.ComponentActivity"
+90-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:24:13-63
+91            android:exported="true" />
+91-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:25:13-36
+92        <activity
+92-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
+93            android:name="androidx.compose.ui.tooling.PreviewActivity"
+93-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
+94            android:exported="true" />
+94-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
 95
 96        <receiver
 96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20

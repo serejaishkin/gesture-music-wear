@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-47:/values-as/values-as.xml",
+            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-48:/values-as/values-as.xml",
             "map": [
                 {
                     "source": "C:\\Users\\sergejj\\.gradle\\caches\\transforms-4\\39d3b36b9270d00e0468995ae8a339c7\\transformed\\core-1.13.1\\res\\values-as\\values-as.xml",

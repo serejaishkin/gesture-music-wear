@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-47:/values-zh-rTW/values-zh-rTW.xml",
+            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-48:/values-zh-rTW/values-zh-rTW.xml",
             "map": [
                 {
                     "source": "C:\\Users\\sergejj\\.gradle\\caches\\transforms-4\\d987a4aaa06b0f9b8727f367364907a3\\transformed\\foundation-release\\res\\values-zh-rTW\\values-zh-rTW.xml",
