@@ -1,22 +1,24 @@
 package com.yourname.gesturemusic.gesture
 
+import android.util.Log
 import kotlin.math.abs
 
 /**
  * Детектор двойного щипка (double pinch) для play/pause.
  *
- * Алгоритм:
- * 1. Следим за осью Z linear acceleration
- * 2. Пик: z > thresholdUp (пальцы к экрану), затем z < thresholdDown (от экрана) = один щипок
- * 3. Два щипка в окне 800 мс = double pinch
- * 4. Cooldown 1000 мс
+ * Упрощённая версия: отслеживаем резкий пик linAccZ.
+ * Щипок = быстрое движение пальцев к экрану и обратно.
  */
 class DoublePinchDetector(
-    private val thresholdUp: Float = 3.0f,      // m/s² — пальцы к экрану
-    private val thresholdDown: Float = -2.0f,   // m/s² — пальцы от экрана
+    private val thresholdUp: Float = 3.0f,
+    private val thresholdDown: Float = -2.0f,
     private val windowMs: Long = 800L,
     private val cooldownMs: Long = 1000L
 ) : GestureDetector {
+
+    companion object {
+        private const val TAG = "DoublePinchDetector"
+    }
 
     private var lastGestureTime = 0L
     private val pinches = mutableListOf<Long>()
@@ -39,6 +41,7 @@ class DoublePinchDetector(
         when (state) {
             PinchState.IDLE -> {
                 if (linAccZ > thresholdUp) {
+                    Log.d(TAG, "Pinch UP detected: z=${"%.1f".format(linAccZ)}")
                     state = PinchState.UP_DETECTED
                     upTime = timestamp
                 }
@@ -48,6 +51,7 @@ class DoublePinchDetector(
                     // Один щипок завершён
                     pinches.add(timestamp)
                     state = PinchState.IDLE
+                    Log.d(TAG, "Pinch DOWN detected: z=${"%.1f".format(linAccZ)}, count=${pinches.size}")
 
                     // Проверяем double pinch
                     if (pinches.size >= 2) {
@@ -56,11 +60,13 @@ class DoublePinchDetector(
                         if (second - first <= windowMs) {
                             lastGestureTime = timestamp
                             pinches.clear()
+                            Log.d(TAG, "Double pinch detected!")
                             return GestureType.PLAY_PAUSE
                         }
                     }
                 } else if (timestamp - upTime > 300L) {
                     // Таймаут, сброс
+                    Log.d(TAG, "Pinch timeout, resetting")
                     state = PinchState.IDLE
                 }
             }

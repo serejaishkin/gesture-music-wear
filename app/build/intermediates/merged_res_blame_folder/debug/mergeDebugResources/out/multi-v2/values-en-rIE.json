@@ -4,7 +4,7 @@
             "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-66:/values-en-rIE/values-en-rIE.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\sergejj\\.gradle\\caches\\8.9\\transforms\\e8d84e58d6de172f34e46910f1d40404\\transformed\\horologist-compose-material-0.7.15\\res\\values-en-rIE\\values-en-rIE.xml",
+                    "source": "C:\\Users\\sergejj\\.gradle\\caches\\transforms-4\\c504fa2814ab9bfc6a842dedeaec5237\\transformed\\horologist-compose-material-0.6.17\\res\\values-en-rIE\\values-en-rIE.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",

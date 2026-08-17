@@ -1,27 +1,27 @@
 package com.yourname.gesturemusic.gesture
 
+import android.util.Log
 import kotlin.math.abs
 
 /**
  * Детектор поворота запястья для переключения треков.
  *
- * Алгоритм:
- * 1. Применяем low-pass filter к гироскопу (alpha = 0.8)
- * 2. Интегрируем ωx за скользящее окно 400 мс
- * 3. Если накопленный угол > threshold → NEXT, < -threshold → PREVIOUS
- * 4. Требуем min angular speed и min duration
- * 5. Cooldown 1500 мс между жестами
- * 6. Антишум: игнорируем при высоком linear_acc_y (бег)
+ * Исправления:
+ * - Реверс направлений (было: +X = NEXT, стало: +X = PREVIOUS)
+ * - Минимальная и максимальная длительность жеста (настраиваемая)
+ *   чтобы избежать фантомных срабатываний от возврата руки
+ * - Cooldown 1000 мс между жестами
  */
 class WristRotationDetector(
     private val angleThresholdDegrees: Float = 22f,
-    private val minAngularSpeed: Float = 1.5f,       // rad/s
-    private val minDurationMs: Long = 150L,
-    private val cooldownMs: Long = 1500L,
+    private val minAngularSpeed: Float = 1.5f,
+    private val minDurationMs: Long = 150L,      // минимальная длительность жеста
+    private val maxDurationMs: Long = 600L,      // !!! максимальная длительность — отсекает возврат руки
+    private val cooldownMs: Long = 1000L,        // !!! 1 секунда между жестами
     private val windowMs: Long = 400L,
-    private val idleThreshold: Float = 0.3f,          // rad/s
+    private val idleThreshold: Float = 0.3f,
     private val idleTimeoutMs: Long = 200L,
-    private val antiNoiseAccY: Float = 15f            // m/s²
+    private val antiNoiseAccY: Float = 15f
 ) : GestureDetector {
 
     private val alpha = 0.8f
@@ -57,6 +57,9 @@ class WristRotationDetector(
         samples.removeAll { timestamp - it.timestamp > windowMs }
         samples.add(Sample(timestamp, filteredGyroX, linAccY))
 
+        // Cooldown между жестами
+        if (timestamp - lastGestureTime < cooldownMs) return null
+
         // Idle detection — сброс окна
         if (abs(filteredGyroX) < idleThreshold) {
             if (idleStartTime == 0L) idleStartTime = timestamp
@@ -67,9 +70,6 @@ class WristRotationDetector(
         } else {
             idleStartTime = 0L
         }
-
-        // Cooldown
-        if (timestamp - lastGestureTime < cooldownMs) return null
 
         // Нужно минимум 2 сэмпла
         if (samples.size < 2) return null
@@ -85,23 +85,34 @@ class WristRotationDetector(
         }
         val angleDegrees = Math.toDegrees(angle.toDouble()).toFloat()
 
-        // Определяем жест
         val firstSample = samples.first()
         val lastSample = samples.last()
         val duration = lastSample.timestamp - firstSample.timestamp
 
+        // !!! Минимальная длительность
         if (duration < minDurationMs) return null
+
+        // !!! Максимальная длительность — отсекает возврат руки (медленное движение)
+        if (duration > maxDurationMs) {
+            Log.d(TAG, "Rejected: duration ${duration}ms > max ${maxDurationMs}ms (return motion)")
+            resetWindow()
+            return null
+        }
 
         return when {
             angleDegrees > angleThresholdDegrees -> {
                 lastGestureTime = timestamp
                 resetWindow()
-                GestureType.NEXT_TRACK
+                // !!! РЕВЕРС: +X теперь PREVIOUS (было NEXT)
+                Log.d(TAG, "PREVIOUS on X ${"%.0f".format(angleDegrees)}° (duration=${duration}ms)")
+                GestureType.PREVIOUS_TRACK
             }
             angleDegrees < -angleThresholdDegrees -> {
                 lastGestureTime = timestamp
                 resetWindow()
-                GestureType.PREVIOUS_TRACK
+                // !!! РЕВЕРС: -X теперь NEXT (было PREVIOUS)
+                Log.d(TAG, "NEXT on X ${"%.0f".format(abs(angleDegrees))}° (duration=${duration}ms)")
+                GestureType.NEXT_TRACK
             }
             else -> null
         }
@@ -118,5 +129,9 @@ class WristRotationDetector(
         gestureStartTime = 0L
         idleStartTime = 0L
         inGesture = false
+    }
+
+    companion object {
+        private const val TAG = "WristRotationDetector"
     }
 }

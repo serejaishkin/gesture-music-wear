@@ -1,122 +1,187 @@
 package com.yourname.gesturemusic.media
 
-import android.content.ComponentName
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothProfile
 import android.content.Context
-import android.media.session.MediaController
-import android.media.session.MediaSessionManager
-import android.media.session.PlaybackState
+import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
+import android.view.KeyEvent
 
-/**
- * Менеджер медиа-контроллера.
- * Подключается к активной медиа-сессии и отправляет команды play/pause/next/previous.
- */
-class MediaControllerManager(context: Context) {
+class MediaControllerManager(private val context: Context) {
 
     companion object {
         private const val TAG = "MediaControllerManager"
+        private const val POLL_INTERVAL_MS = 2000L
     }
 
-    private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-    private var mediaController: MediaController? = null
+    private val appContext = context.applicationContext
+    private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val handler = Handler(Looper.getMainLooper())
-
-    private var callback: MediaController.Callback? = null
     private var stateListener: ((Boolean) -> Unit)? = null
+    private var isPolling = false
 
-    /** Подключиться к активной медиа-сессии. */
-    fun connect() {
-        try {
-            val sessions = mediaSessionManager.getActiveSessions(ComponentName("com.yourname.gesturemusic", "com.yourname.gesturemusic.service.GestureMusicService"))
-            val activeSession = sessions.firstOrNull()
+    private var hidDevice: Any? = null
+    private var hidProfile: Any? = null
 
-            if (activeSession != null) {
-                mediaController = activeSession
-                setupCallback(activeSession)
-                Log.d(TAG, "Connected to: ${activeSession.packageName}")
-            } else {
-                Log.w(TAG, "No active media session found")
-            }
-        } catch (e: SecurityException) {
-            Log.e(TAG, "SecurityException: ${e.message}")
-        }
-    }
-
-    /** Обновить подключение к текущей активной сессии. */
-    fun refreshConnection() {
-        disconnect()
-        connect()
-    }
-
-    /** Отключиться от сессии. */
-    fun disconnect() {
-        mediaController?.unregisterCallback(callback ?: return)
-        mediaController = null
-        callback = null
-    }
-
-    /** Установить слушатель изменения состояния воспроизведения. */
     fun setStateListener(listener: (isPlaying: Boolean) -> Unit) {
         stateListener = listener
     }
 
-    /** Воспроизведение / пауза (toggle). */
+    fun connect() {
+        if (isPolling) return
+        isPolling = true
+        pollState()
+        initBluetoothHid()
+        Log.d(TAG, "Connected (Bluetooth HID mode)")
+    }
+
+    fun refreshConnection() {}
+
+    fun disconnect() {
+        isPolling = false
+        handler.removeCallbacksAndMessages(null)
+    }
+
     fun playPause() {
-        val controller = mediaController ?: run {
-            refreshConnection()
-            return
-        }
-        val state = controller.playbackState?.state
-        if (state == PlaybackState.STATE_PLAYING) {
-            controller.transportControls.pause()
-        } else {
-            controller.transportControls.play()
-        }
+        Log.d(TAG, "playPause")
+        dispatch(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
     }
 
-    /** Следующий трек. */
     fun nextTrack() {
-        val controller = mediaController ?: run {
-            refreshConnection()
-            return
-        }
-        controller.transportControls.skipToNext()
+        Log.d(TAG, "nextTrack")
+        dispatch(KeyEvent.KEYCODE_MEDIA_NEXT)
     }
 
-    /** Предыдущий трек. */
     fun previousTrack() {
-        val controller = mediaController ?: run {
-            refreshConnection()
+        Log.d(TAG, "previousTrack")
+        dispatch(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+    }
+
+    fun isPlaying(): Boolean = audioManager.isMusicActive
+    fun hasActiveSession(): Boolean = audioManager.isMusicActive
+
+    private fun dispatch(keyCode: Int) {
+        val downTime = SystemClock.uptimeMillis()
+
+        if (sendBluetoothMediaKey(keyCode)) {
+            Log.d(TAG, "Bluetooth HID sent: keyCode=$keyCode")
             return
         }
-        controller.transportControls.skipToPrevious()
-    }
 
-    /** Воспроизводится ли сейчас музыка. */
-    fun isPlaying(): Boolean {
-        return mediaController?.playbackState?.state == PlaybackState.STATE_PLAYING
-    }
+        try {
+            val downEvent = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0)
+            val upEvent = KeyEvent(downTime, downTime + 50, KeyEvent.ACTION_UP, keyCode, 0)
 
-    /** Есть ли активная сессия. */
-    fun hasActiveSession(): Boolean = mediaController != null
-
-    private fun setupCallback(controller: MediaController) {
-        callback = object : MediaController.Callback() {
-            override fun onPlaybackStateChanged(state: PlaybackState?) {
-                super.onPlaybackStateChanged(state)
-                val playing = state?.state == PlaybackState.STATE_PLAYING
-                stateListener?.invoke(playing)
-            }
-
-            override fun onSessionDestroyed() {
-                super.onSessionDestroyed()
-                refreshConnection()
-            }
+            audioManager.dispatchMediaKeyEvent(downEvent)
+            handler.postDelayed({
+                audioManager.dispatchMediaKeyEvent(upEvent)
+            }, 50)
+            Log.d(TAG, "AudioManager.dispatch sent: keyCode=$keyCode")
+            return
+        } catch (e: Exception) {
+            Log.w(TAG, "AudioManager failed: ${e.message}")
         }
-        controller.registerCallback(callback!!, handler)
-        // Отправляем текущее состояние
-        stateListener?.invoke(isPlaying())
+
+        fallbackBroadcast(keyCode, downTime)
+    }
+
+    private fun initBluetoothHid() {
+        try {
+            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter() ?: return
+            val hidDeviceProfile = 19
+
+            bluetoothAdapter.getProfileProxy(appContext, object : BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                    Log.d(TAG, "Bluetooth HID profile connected: $profile")
+                    hidProfile = proxy
+                    try {
+                        val getDevicesMethod = proxy.javaClass.getDeclaredMethod("getConnectedDevices")
+                        val devices = getDevicesMethod.invoke(proxy) as? List<*>
+                        if (!devices.isNullOrEmpty()) {
+                            hidDevice = devices[0]
+                            Log.d(TAG, "HID device found: $hidDevice")
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to get HID devices: ${e.message}")
+                    }
+                }
+
+                override fun onServiceDisconnected(profile: Int) {
+                    Log.d(TAG, "Bluetooth HID profile disconnected")
+                    hidProfile = null
+                    hidDevice = null
+                }
+            }, hidDeviceProfile)
+        } catch (e: Exception) {
+            Log.w(TAG, "Bluetooth HID init failed: ${e.message}")
+        }
+    }
+
+    private fun sendBluetoothMediaKey(keyCode: Int): Boolean {
+        return try {
+            val device = hidDevice ?: return false
+            val profile = hidProfile ?: return false
+
+            val sendReportMethod = profile.javaClass.getDeclaredMethod(
+                "sendReport",
+                BluetoothDevice::class.java,
+                Int::class.javaPrimitiveType,
+                ByteArray::class.java
+            )
+
+            val report = when (keyCode) {
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> byteArrayOf(0x01, 0x00, 0x00)
+                KeyEvent.KEYCODE_MEDIA_NEXT -> byteArrayOf(0x00, 0x01, 0x00)
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS -> byteArrayOf(0x00, 0x02, 0x00)
+                else -> return false
+            }
+
+            sendReportMethod.invoke(profile, device, 1, report)
+
+            handler.postDelayed({
+                try {
+                    sendReportMethod.invoke(profile, device, 1, byteArrayOf(0x00, 0x00, 0x00))
+                } catch (_: Exception) {}
+            }, 50)
+
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Bluetooth HID send failed: ${e.message}")
+            false
+        }
+    }
+
+    private fun fallbackBroadcast(keyCode: Int, downTime: Long) {
+        try {
+            val down = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0)
+            val up = KeyEvent(downTime, downTime + 50, KeyEvent.ACTION_UP, keyCode, 0)
+
+            val downIntent = android.content.Intent(android.content.Intent.ACTION_MEDIA_BUTTON).apply {
+                putExtra(android.content.Intent.EXTRA_KEY_EVENT, down)
+            }
+            appContext.sendOrderedBroadcast(downIntent, null)
+
+            handler.postDelayed({
+                val upIntent = android.content.Intent(android.content.Intent.ACTION_MEDIA_BUTTON).apply {
+                    putExtra(android.content.Intent.EXTRA_KEY_EVENT, up)
+                }
+                appContext.sendOrderedBroadcast(upIntent, null)
+            }, 50)
+
+            Log.d(TAG, "Fallback broadcast sent: keyCode=$keyCode")
+        } catch (e: Exception) {
+            Log.e(TAG, "Fallback broadcast failed: ${e.message}")
+        }
+    }
+
+    private fun pollState() {
+        if (!isPolling) return
+        val playing = audioManager.isMusicActive
+        stateListener?.invoke(playing)
+        handler.postDelayed({ pollState() }, POLL_INTERVAL_MS)
     }
 }

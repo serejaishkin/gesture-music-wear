@@ -5,12 +5,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.VibrationEffect
@@ -27,19 +30,15 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
-/**
- * ForegroundService для распознавания жестов и управления музыкой.
- *
- * Работает с SensorManager (гироскоп + linear acceleration) и MediaController.
- * Автоотключает сенсоры через 30 секунд после паузы музыки.
- */
 class GestureMusicService : Service(), SensorEventListener {
 
     companion object {
         private const val TAG = "GestureMusicService"
         private const val CHANNEL_ID = "gesture_music_channel"
         private const val NOTIFICATION_ID = 1
-        private const val IDLE_TIMEOUT_MS = 30000L  // 30 секунд
+        private const val IDLE_TIMEOUT_MS = 30000L
+        private const val GESTURE_COOLDOWN_MS = 1000L  // !!! 1 секунда между ЛЮБЫМИ жестами
+        private const val SCREEN_OFF_BLOCK_MS = 800L
 
         const val ACTION_START = "com.yourname.gesturemusic.ACTION_START"
         const val ACTION_STOP = "com.yourname.gesturemusic.ACTION_STOP"
@@ -57,15 +56,17 @@ class GestureMusicService : Service(), SensorEventListener {
     private lateinit var pinchDetector: DoublePinchDetector
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var vibrator: Vibrator
+    private lateinit var notificationManager: NotificationManager
 
     private var isRunning = false
     private var isMusicPlaying = false
     private var lastSensorTimestamp = 0L
+    private var lastGestureTime = 0L
+    private var screenOffTime = -1L
 
     private var idleExecutor: ScheduledExecutorService? = null
     private var idleTask: java.util.concurrent.ScheduledFuture<*>? = null
 
-    // Последние значения сенсоров
     private var lastGyroX = 0f
     private var lastGyroY = 0f
     private var lastGyroZ = 0f
@@ -73,8 +74,24 @@ class GestureMusicService : Service(), SensorEventListener {
     private var lastLinAccY = 0f
     private var lastLinAccZ = 0f
 
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    screenOffTime = System.currentTimeMillis()
+                    Log.d(TAG, "SCREEN_OFF — блокируем жесты на ${SCREEN_OFF_BLOCK_MS}мс")
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    screenOffTime = -1L
+                    Log.d(TAG, "SCREEN_ON — блок снят")
+                }
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "onCreate")
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         linearAccel = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
@@ -91,6 +108,7 @@ class GestureMusicService : Service(), SensorEventListener {
         wakeLock.setReferenceCounted(false)
 
         vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        notificationManager = getSystemService(NotificationManager::class.java)
 
         mediaControllerManager.setStateListener { playing ->
             isMusicPlaying = playing
@@ -101,10 +119,21 @@ class GestureMusicService : Service(), SensorEventListener {
             }
         }
 
+        val screenFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenStateReceiver, screenFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(screenStateReceiver, screenFilter)
+        }
+
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "onStartCommand action=${intent?.action}")
         when (intent?.action) {
             ACTION_START -> startGestureDetection()
             ACTION_STOP -> stopGestureDetection()
@@ -117,12 +146,21 @@ class GestureMusicService : Service(), SensorEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d(TAG, "onDestroy")
         stopGestureDetection()
-        mediaControllerManager.disconnect()
+        try { unregisterReceiver(screenStateReceiver) } catch (_: Exception) {}
+        try { mediaControllerManager.disconnect() } catch (_: Exception) {}
         idleExecutor?.shutdown()
     }
 
-    // --- SensorEventListener ---
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved — перезапускаем сервис")
+        val restartIntent = Intent(applicationContext, GestureMusicService::class.java).apply {
+            action = ACTION_START
+        }
+        startService(restartIntent)
+        super.onTaskRemoved(rootIntent)
+    }
 
     override fun onSensorChanged(event: SensorEvent?) {
         event ?: return
@@ -139,9 +177,6 @@ class GestureMusicService : Service(), SensorEventListener {
                 lastLinAccX = event.values[0]
                 lastLinAccY = event.values[1]
                 lastLinAccZ = event.values[2]
-
-                // Обрабатываем жесты при получении linear acceleration
-                // (частота обычно совпадает с gyro или выше)
                 processGestures(timestamp)
             }
         }
@@ -149,9 +184,15 @@ class GestureMusicService : Service(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
-    // --- Gesture Processing ---
-
     private fun processGestures(timestamp: Long) {
+        if (screenOffTime > 0 && timestamp - screenOffTime < SCREEN_OFF_BLOCK_MS) {
+            return
+        }
+
+        if (timestamp - lastGestureTime < GESTURE_COOLDOWN_MS) {
+            return
+        }
+
         val wristGesture = wristDetector.process(
             timestamp,
             lastGyroX, lastGyroY, lastGyroZ,
@@ -164,11 +205,12 @@ class GestureMusicService : Service(), SensorEventListener {
         )
 
         val gesture = wristGesture ?: pinchGesture
-        gesture?.let { executeGesture(it) }
+        gesture?.let { executeGesture(it, timestamp) }
     }
 
-    private fun executeGesture(gesture: GestureType) {
-        Log.d(TAG, "Gesture detected: $gesture")
+    private fun executeGesture(gesture: GestureType, timestamp: Long = System.currentTimeMillis()) {
+        lastGestureTime = timestamp
+        Log.d(TAG, "=== Gesture detected: $gesture ===")
         vibrate()
 
         when (gesture) {
@@ -177,20 +219,22 @@ class GestureMusicService : Service(), SensorEventListener {
             GestureType.PLAY_PAUSE -> mediaControllerManager.playPause()
         }
 
-        // Отправляем broadcast для UI
         sendBroadcast(Intent("com.yourname.gesturemusic.GESTURE_DETECTED").apply {
             putExtra("gesture", gesture.name)
         })
     }
 
-    // --- Service Control ---
-
     private fun startGestureDetection() {
         if (isRunning) return
         isRunning = true
+        lastGestureTime = 0L
+        screenOffTime = -1L
 
-        mediaControllerManager.connect()
-        mediaControllerManager.refreshConnection()
+        try {
+            mediaControllerManager.connect()
+        } catch (e: Exception) {
+            Log.e(TAG, "MediaController connect failed", e)
+        }
 
         gyroscope?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
@@ -200,10 +244,10 @@ class GestureMusicService : Service(), SensorEventListener {
         }
 
         if (!wakeLock.isHeld) {
-            wakeLock.acquire(10 * 60 * 1000L) // 10 минут макс, обновляем при активности
+            wakeLock.acquire(10 * 60 * 1000L)
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification())
+        startForeground(NOTIFICATION_ID, buildNotification("Слушаю жесты запястья"))
         Log.d(TAG, "Gesture detection started")
     }
 
@@ -234,8 +278,6 @@ class GestureMusicService : Service(), SensorEventListener {
         Log.d(TAG, "Sensitivity updated: angle=$angleThreshold, pinch=$pinchThreshold")
     }
 
-    // --- Idle Timer ---
-
     private fun startIdleTimer() {
         cancelIdleTimer()
         idleExecutor = idleExecutor ?: Executors.newSingleThreadScheduledExecutor()
@@ -254,7 +296,6 @@ class GestureMusicService : Service(), SensorEventListener {
         idleTask?.cancel(false)
         idleTask = null
         if (!isRunning) return
-        // Перерегистрируем сенсоры, если были отключены
         gyroscope?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
@@ -266,8 +307,6 @@ class GestureMusicService : Service(), SensorEventListener {
         }
     }
 
-    // --- Notification ---
-
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -277,11 +316,10 @@ class GestureMusicService : Service(), SensorEventListener {
             description = "Фоновое управление музыкой жестами"
             setShowBadge(false)
         }
-        val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(text: String = "Слушаю жесты запястья"): Notification {
         val stopIntent = PendingIntent.getService(
             this, 0,
             Intent(this, GestureMusicService::class.java).apply { action = ACTION_STOP },
@@ -296,7 +334,7 @@ class GestureMusicService : Service(), SensorEventListener {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Gesture Music")
-            .setContentText("Слушаю жесты запястья")
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_music_note)
             .setContentIntent(contentIntent)
             .addAction(R.drawable.ic_stop, "Стоп", stopIntent)
@@ -305,11 +343,11 @@ class GestureMusicService : Service(), SensorEventListener {
             .build()
     }
 
-    // --- Haptic Feedback ---
-
     private fun vibrate() {
-        val effect = VibrationEffect.createOneShot(50L, VibrationEffect.DEFAULT_AMPLITUDE)
-        vibrator.vibrate(effect)
+        try {
+            val effect = VibrationEffect.createOneShot(50L, VibrationEffect.DEFAULT_AMPLITUDE)
+            vibrator.vibrate(effect)
+        } catch (_: Exception) {}
     }
 
     private fun runOnUiThread(action: () -> Unit) {

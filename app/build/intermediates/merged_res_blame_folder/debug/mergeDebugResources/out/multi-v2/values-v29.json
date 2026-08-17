@@ -4,7 +4,7 @@
             "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-66:/values-v29/values-v29.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\sergejj\\.gradle\\caches\\8.9\\transforms\\9e289b78e469453da9daab0d199aa0d1\\transformed\\core-splashscreen-1.0.1\\res\\values-v29\\values-v29.xml",
+                    "source": "C:\\Users\\sergejj\\.gradle\\caches\\transforms-4\\e2ce4d21f1b5bd7fa8830c2270bd29b4\\transformed\\core-splashscreen-1.0.1\\res\\values-v29\\values-v29.xml",
                     "from": {
                         "startLines": "2,7",
                         "startColumns": "4,4",

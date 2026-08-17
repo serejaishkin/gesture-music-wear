@@ -23,10 +23,6 @@ import androidx.wear.compose.material.Text
 import com.yourname.gesturemusic.ui.components.SensitivitySlider
 import com.yourname.gesturemusic.viewmodel.GestureViewModel
 
-/**
- * Главный экран приложения.
- * Показывает статус, настройки чувствительности и кнопки управления.
- */
 @Composable
 fun ControlScreen(
     viewModel: GestureViewModel = viewModel()
@@ -35,7 +31,9 @@ fun ControlScreen(
     val lastGesture by viewModel.lastGesture
     val angleThreshold by viewModel.angleThreshold
     val pinchThreshold by viewModel.pinchThreshold
-    val isCalibrating by viewModel.isCalibrating
+    val minDuration by viewModel.minDuration
+    val maxDuration by viewModel.maxDuration
+    val saveMessage by viewModel.saveMessage
 
     Column(
         modifier = Modifier
@@ -43,16 +41,14 @@ fun ControlScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Заголовок
         Text(
             text = "🎵 Gesture Music",
             style = MaterialTheme.typography.title3,
             textAlign = TextAlign.Center
         )
 
-        // Статус
         val statusColor = if (isRunning) {
             MaterialTheme.colors.primary
         } else {
@@ -65,7 +61,6 @@ fun ControlScreen(
             textAlign = TextAlign.Center
         )
 
-        // Кнопка запуска / остановки
         Button(
             onClick = {
                 if (isRunning) viewModel.stopService() else viewModel.startService()
@@ -76,9 +71,8 @@ fun ControlScreen(
             Text(if (isRunning) "⏹ Стоп" else "▶️ Старт")
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
-        // Ползунок чувствительности поворота
         SensitivitySlider(
             label = "Поворот",
             value = angleThreshold,
@@ -88,7 +82,6 @@ fun ControlScreen(
             valueFormatter = { "%.0f°".format(it) }
         )
 
-        // Ползунок чувствительности щипка
         SensitivitySlider(
             label = "Щипок",
             value = pinchThreshold,
@@ -98,19 +91,54 @@ fun ControlScreen(
             valueFormatter = { "%.1f".format(it) }
         )
 
-        // Кнопка калибровки
+        // !!! Новые слайдеры для длительности жеста
+        SensitivitySlider(
+            label = "Мин. время",
+            value = minDuration.toFloat(),
+            valueRange = 50f..300f,
+            steps = 24,
+            onValueChange = { viewModel.updateMinDuration(it.toLong()) },
+            valueFormatter = { "${it.toInt()}мс" }
+        )
+
+        SensitivitySlider(
+            label = "Макс. время",
+            value = maxDuration.toFloat(),
+            valueRange = 300f..1000f,
+            steps = 69,
+            onValueChange = { viewModel.updateMaxDuration(it.toLong()) },
+            valueFormatter = { "${it.toInt()}мс" }
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
         Button(
-            onClick = viewModel::calibrate,
-            enabled = !isCalibrating,
+            onClick = viewModel::saveSettings,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.secondaryButtonColors()
         ) {
-            Text(if (isCalibrating) "Калибровка..." else "🔧 Калибровка")
+            Text("💾 Сохранить")
         }
 
-        // Последний жест
+        Button(
+            onClick = viewModel::restoreDefaults,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.secondaryButtonColors()
+        ) {
+            Text("↺ Сбросить")
+        }
+
+        if (saveMessage.isNotEmpty()) {
+            Text(
+                text = saveMessage,
+                style = MaterialTheme.typography.caption3,
+                color = MaterialTheme.colors.secondary,
+                textAlign = TextAlign.Center
+            )
+        }
+
         if (lastGesture.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = lastGesture,
                 style = MaterialTheme.typography.caption3,
@@ -119,10 +147,9 @@ fun ControlScreen(
             )
         }
 
-        // Подсказка
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = "➡️ вправо: next\n⬅️ влево: prev\n👌 щипок: play/pause",
+            text = "➡️ вправо: prev\n⬅️ влево: next\n👌 щипок: play/pause",
             style = MaterialTheme.typography.caption3,
             color = MaterialTheme.colors.onSurfaceVariant,
             textAlign = TextAlign.Center

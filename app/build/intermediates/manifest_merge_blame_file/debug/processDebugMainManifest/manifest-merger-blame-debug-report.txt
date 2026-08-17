@@ -6,213 +6,217 @@
 6
 7    <uses-sdk
 8        android:minSdkVersion="30"
-9        android:targetSdkVersion="36" />
+9        android:targetSdkVersion="34" />
 10
-11    <!-- Sensors: IMU does NOT need health permissions on Android 16 -->
-12    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
-12-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:5-85
-12-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:22-82
-13    <uses-permission android:name="android.permission.WAKE_LOCK" />
-13-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:5-68
-13-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:22-65
-14    <uses-permission android:name="android.permission.VIBRATE" />
-14-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:5-66
-14-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:22-63
-15
-16    <!-- Foreground Service -->
-17    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-17-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:5-77
-17-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:22-74
-18    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-18-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:11:5-94
-18-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:11:22-91
-19    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-19-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:12:5-92
-19-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:12:22-89
-20
-21    <!-- Hardware -->
-22    <uses-feature android:name="android.hardware.type.watch" />
-22-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:15:5-64
-22-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:15:19-61
-23    <uses-feature
-23-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:5-98
-24        android:name="android.hardware.sensor.accelerometer"
-24-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:19-71
-25        android:required="true" />
-25-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:72-95
-26    <uses-feature
-26-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:5-94
-27        android:name="android.hardware.sensor.gyroscope"
-27-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:19-67
-28        android:required="true" />
-28-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:68-91
-29
-30    <permission
-30-->[androidx.core:core:1.15.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\91208c8dc80f66c0852dcc74ce45b967\transformed\core-1.15.0\AndroidManifest.xml:22:5-24:47
-31        android:name="com.yourname.gesturemusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-31-->[androidx.core:core:1.15.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\91208c8dc80f66c0852dcc74ce45b967\transformed\core-1.15.0\AndroidManifest.xml:23:9-81
-32        android:protectionLevel="signature" />
-32-->[androidx.core:core:1.15.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\91208c8dc80f66c0852dcc74ce45b967\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
-33
-34    <uses-permission android:name="com.yourname.gesturemusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-34-->[androidx.core:core:1.15.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\91208c8dc80f66c0852dcc74ce45b967\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
-34-->[androidx.core:core:1.15.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\91208c8dc80f66c0852dcc74ce45b967\transformed\core-1.15.0\AndroidManifest.xml:26:22-94
-35
-36    <application
-36-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:19:5-52:19
-37        android:name="com.yourname.gesturemusic.GestureMusicApp"
-37-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:20:9-40
-38        android:allowBackup="true"
-38-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:21:9-35
-39        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-39-->[androidx.core:core:1.15.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\91208c8dc80f66c0852dcc74ce45b967\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
-40        android:debuggable="true"
-41        android:extractNativeLibs="false"
-42        android:icon="@mipmap/ic_launcher"
-42-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:22:9-43
-43        android:label="@string/app_name"
-43-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:23:9-41
-44        android:roundIcon="@mipmap/ic_launcher_round"
-44-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:24:9-54
-45        android:supportsRtl="true"
-45-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:25:9-35
-46        android:theme="@android:style/Theme.DeviceDefault" >
-46-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:26:9-59
-47        <uses-library
-47-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:28:9-30:39
-48            android:name="com.google.android.wearable"
-48-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:29:13-55
-49            android:required="true" />
-49-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:30:13-36
-50
-51        <meta-data
-51-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:32:9-34:36
-52            android:name="com.google.android.wearable.standalone"
-52-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:33:13-66
-53            android:value="true" />
-53-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:34:13-33
-54
-55        <activity
-55-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:36:9-45:20
-56            android:name="com.yourname.gesturemusic.MainActivity"
-56-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:37:13-41
-57            android:exported="true"
-57-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:38:13-36
-58            android:launchMode="singleTask"
-58-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:40:13-44
-59            android:theme="@android:style/Theme.DeviceDefault" >
-59-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:39:13-63
-60            <intent-filter>
-60-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:41:13-44:29
-61                <action android:name="android.intent.action.MAIN" />
-61-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:42:17-69
-61-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:42:25-66
-62
-63                <category android:name="android.intent.category.LAUNCHER" />
-63-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:17-77
-63-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:27-74
-64            </intent-filter>
-65        </activity>
-66
-67        <service
-67-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:47:9-51:38
-68            android:name="com.yourname.gesturemusic.service.GestureMusicService"
-68-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:48:13-56
-69            android:enabled="true"
-69-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:51:13-35
-70            android:exported="false"
-70-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:49:13-37
-71            android:foregroundServiceType="connectedDevice|mediaPlayback" />
-71-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:50:13-74
-72
-73        <uses-library
-73-->[androidx.wear.compose:compose-foundation:1.5.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\2b42a8f962d6e617266fcf8226a17170\transformed\compose-foundation-1.5.0\AndroidManifest.xml:23:9-25:40
-74            android:name="wear-sdk"
-74-->[androidx.wear.compose:compose-foundation:1.5.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\2b42a8f962d6e617266fcf8226a17170\transformed\compose-foundation-1.5.0\AndroidManifest.xml:24:13-36
-75            android:required="false" />
-75-->[androidx.wear.compose:compose-foundation:1.5.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\2b42a8f962d6e617266fcf8226a17170\transformed\compose-foundation-1.5.0\AndroidManifest.xml:25:13-37
-76
-77        <activity
-77-->[androidx.compose.ui:ui-tooling-android:1.8.3] C:\Users\sergejj\.gradle\caches\8.9\transforms\c160401bc7c3888e4474ba95e53aa783\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
-78            android:name="androidx.compose.ui.tooling.PreviewActivity"
-78-->[androidx.compose.ui:ui-tooling-android:1.8.3] C:\Users\sergejj\.gradle\caches\8.9\transforms\c160401bc7c3888e4474ba95e53aa783\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
-79            android:exported="true" />
-79-->[androidx.compose.ui:ui-tooling-android:1.8.3] C:\Users\sergejj\.gradle\caches\8.9\transforms\c160401bc7c3888e4474ba95e53aa783\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
-80
-81        <provider
-81-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\f5c1a6a9e758d3518b9514353e12a357\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
-82            android:name="androidx.startup.InitializationProvider"
-82-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\f5c1a6a9e758d3518b9514353e12a357\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
-83            android:authorities="com.yourname.gesturemusic.androidx-startup"
-83-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\f5c1a6a9e758d3518b9514353e12a357\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
-84            android:exported="false" >
-84-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\f5c1a6a9e758d3518b9514353e12a357\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
-85            <meta-data
-85-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\f5c1a6a9e758d3518b9514353e12a357\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
-86                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-86-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\f5c1a6a9e758d3518b9514353e12a357\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
-87                android:value="androidx.startup" />
-87-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\f5c1a6a9e758d3518b9514353e12a357\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
-88            <meta-data
-88-->[androidx.lifecycle:lifecycle-process:2.9.2] C:\Users\sergejj\.gradle\caches\8.9\transforms\9045fb87b13576e55cba553d4540f3f3\transformed\lifecycle-process-2.9.2\AndroidManifest.xml:29:13-31:52
-89                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-89-->[androidx.lifecycle:lifecycle-process:2.9.2] C:\Users\sergejj\.gradle\caches\8.9\transforms\9045fb87b13576e55cba553d4540f3f3\transformed\lifecycle-process-2.9.2\AndroidManifest.xml:30:17-78
-90                android:value="androidx.startup" />
-90-->[androidx.lifecycle:lifecycle-process:2.9.2] C:\Users\sergejj\.gradle\caches\8.9\transforms\9045fb87b13576e55cba553d4540f3f3\transformed\lifecycle-process-2.9.2\AndroidManifest.xml:31:17-49
-91            <meta-data
-91-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
-92                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-92-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
-93                android:value="androidx.startup" />
-93-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
-94        </provider>
-95
-96        <activity
-96-->[androidx.compose.ui:ui-test-manifest:1.8.3] C:\Users\sergejj\.gradle\caches\8.9\transforms\b523d4fd11bf795215a50e951429f09c\transformed\ui-test-manifest-1.8.3\AndroidManifest.xml:23:9-26:79
-97            android:name="androidx.activity.ComponentActivity"
-97-->[androidx.compose.ui:ui-test-manifest:1.8.3] C:\Users\sergejj\.gradle\caches\8.9\transforms\b523d4fd11bf795215a50e951429f09c\transformed\ui-test-manifest-1.8.3\AndroidManifest.xml:24:13-63
-98            android:exported="true"
-98-->[androidx.compose.ui:ui-test-manifest:1.8.3] C:\Users\sergejj\.gradle\caches\8.9\transforms\b523d4fd11bf795215a50e951429f09c\transformed\ui-test-manifest-1.8.3\AndroidManifest.xml:25:13-36
-99            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
-99-->[androidx.compose.ui:ui-test-manifest:1.8.3] C:\Users\sergejj\.gradle\caches\8.9\transforms\b523d4fd11bf795215a50e951429f09c\transformed\ui-test-manifest-1.8.3\AndroidManifest.xml:26:13-76
-100
-101        <receiver
-101-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
-102            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-102-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
-103            android:directBootAware="false"
-103-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
-104            android:enabled="true"
-104-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
-105            android:exported="true"
-105-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
-106            android:permission="android.permission.DUMP" >
-106-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
-107            <intent-filter>
-107-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
-108                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-108-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
-108-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
-109            </intent-filter>
-110            <intent-filter>
-110-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
-111                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-111-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
-111-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
-112            </intent-filter>
-113            <intent-filter>
-113-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
-114                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-114-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
-114-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
-115            </intent-filter>
-116            <intent-filter>
-116-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
-117                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-117-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
-117-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sergejj\.gradle\caches\8.9\transforms\a22ee5414e9decd25376b26ef5089b65\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
-118            </intent-filter>
-119        </receiver>
-120    </application>
-121
-122</manifest>
+11    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+11-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:4:5-85
+11-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:4:22-82
+12    <uses-permission android:name="android.permission.WAKE_LOCK" />
+12-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:5-68
+12-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:22-65
+13    <uses-permission android:name="android.permission.VIBRATE" />
+13-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:5-66
+13-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:22-63
+14    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+14-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:5-77
+14-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:22-74
+15    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+15-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:8:5-92
+15-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:8:22-89
+16    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+16-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:9:5-95
+16-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:9:22-92
+17    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+17-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:5-80
+17-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:22-77
+18
+19    <!-- !!! Bluetooth permissions для HID -->
+20    <uses-permission android:name="android.permission.BLUETOOTH" />
+20-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:13:5-68
+20-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:13:22-65
+21    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+21-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:14:5-76
+21-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:14:22-73
+22
+23    <uses-feature android:name="android.hardware.type.watch" />
+23-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:5-64
+23-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:19-61
+24    <uses-feature
+24-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:5-98
+25        android:name="android.hardware.sensor.accelerometer"
+25-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:19-71
+26        android:required="true" />
+26-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:72-95
+27    <uses-feature
+27-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:5-94
+28        android:name="android.hardware.sensor.gyroscope"
+28-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:19-67
+29        android:required="true" />
+29-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:68-91
+30
+31    <permission
+31-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\673fc15ea7b17f3d279752e79e78f973\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+32        android:name="com.yourname.gesturemusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+32-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\673fc15ea7b17f3d279752e79e78f973\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+33        android:protectionLevel="signature" />
+33-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\673fc15ea7b17f3d279752e79e78f973\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+34
+35    <uses-permission android:name="com.yourname.gesturemusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+35-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\673fc15ea7b17f3d279752e79e78f973\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+35-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\673fc15ea7b17f3d279752e79e78f973\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+36
+37    <application
+37-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:20:5-53:19
+38        android:name="com.yourname.gesturemusic.GestureMusicApp"
+38-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:21:9-40
+39        android:allowBackup="true"
+39-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:22:9-35
+40        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+40-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\673fc15ea7b17f3d279752e79e78f973\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+41        android:debuggable="true"
+42        android:extractNativeLibs="false"
+43        android:icon="@mipmap/ic_launcher"
+43-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:23:9-43
+44        android:label="@string/app_name"
+44-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:24:9-41
+45        android:roundIcon="@mipmap/ic_launcher_round"
+45-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:25:9-54
+46        android:supportsRtl="true"
+46-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:26:9-35
+47        android:theme="@android:style/Theme.DeviceDefault" >
+47-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:27:9-59
+48        <uses-library
+48-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:29:9-31:39
+49            android:name="com.google.android.wearable"
+49-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:30:13-55
+50            android:required="true" />
+50-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:31:13-36
+51
+52        <meta-data
+52-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:33:9-35:36
+53            android:name="com.google.android.wearable.standalone"
+53-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:34:13-66
+54            android:value="true" />
+54-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:35:13-33
+55
+56        <activity
+56-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:37:9-46:20
+57            android:name="com.yourname.gesturemusic.MainActivity"
+57-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:38:13-41
+58            android:exported="true"
+58-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:39:13-36
+59            android:launchMode="singleTask"
+59-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:41:13-44
+60            android:theme="@android:style/Theme.DeviceDefault" >
+60-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:40:13-63
+61            <intent-filter>
+61-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:42:13-45:29
+62                <action android:name="android.intent.action.MAIN" />
+62-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:17-69
+62-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:25-66
+63
+64                <category android:name="android.intent.category.LAUNCHER" />
+64-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:44:17-77
+64-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:44:27-74
+65            </intent-filter>
+66        </activity>
+67
+68        <service
+68-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:48:9-52:38
+69            android:name="com.yourname.gesturemusic.service.GestureMusicService"
+69-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:49:13-56
+70            android:enabled="true"
+70-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:52:13-35
+71            android:exported="false"
+71-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:50:13-37
+72            android:foregroundServiceType="mediaPlayback" />
+72-->C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:51:13-58
+73
+74        <uses-library
+74-->[androidx.wear.compose:compose-foundation:1.4.0-beta03] C:\Users\sergejj\.gradle\caches\transforms-4\d6afa89399b0abf0c8b808d1bbc27436\transformed\compose-foundation-1.4.0-beta03\AndroidManifest.xml:23:9-25:40
+75            android:name="wear-sdk"
+75-->[androidx.wear.compose:compose-foundation:1.4.0-beta03] C:\Users\sergejj\.gradle\caches\transforms-4\d6afa89399b0abf0c8b808d1bbc27436\transformed\compose-foundation-1.4.0-beta03\AndroidManifest.xml:24:13-36
+76            android:required="false" />
+76-->[androidx.wear.compose:compose-foundation:1.4.0-beta03] C:\Users\sergejj\.gradle\caches\transforms-4\d6afa89399b0abf0c8b808d1bbc27436\transformed\compose-foundation-1.4.0-beta03\AndroidManifest.xml:25:13-37
+77
+78        <activity
+78-->[androidx.compose.ui:ui-tooling-android:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\0331070b6fc34d909257c4963c8ddfea\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
+79            android:name="androidx.compose.ui.tooling.PreviewActivity"
+79-->[androidx.compose.ui:ui-tooling-android:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\0331070b6fc34d909257c4963c8ddfea\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
+80            android:exported="true" />
+80-->[androidx.compose.ui:ui-tooling-android:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\0331070b6fc34d909257c4963c8ddfea\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
+81        <activity
+81-->[androidx.compose.ui:ui-test-manifest:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\916f5f69f54c3d97c959a513d5d7e4e5\transformed\ui-test-manifest-1.7.0-beta05\AndroidManifest.xml:23:9-25:39
+82            android:name="androidx.activity.ComponentActivity"
+82-->[androidx.compose.ui:ui-test-manifest:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\916f5f69f54c3d97c959a513d5d7e4e5\transformed\ui-test-manifest-1.7.0-beta05\AndroidManifest.xml:24:13-63
+83            android:exported="true" />
+83-->[androidx.compose.ui:ui-test-manifest:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\916f5f69f54c3d97c959a513d5d7e4e5\transformed\ui-test-manifest-1.7.0-beta05\AndroidManifest.xml:25:13-36
+84
+85        <provider
+85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\82994868b108d0b1d00a4ebed338425f\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+86            android:name="androidx.startup.InitializationProvider"
+86-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\82994868b108d0b1d00a4ebed338425f\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+87            android:authorities="com.yourname.gesturemusic.androidx-startup"
+87-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\82994868b108d0b1d00a4ebed338425f\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+88            android:exported="false" >
+88-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\82994868b108d0b1d00a4ebed338425f\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+89            <meta-data
+89-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\82994868b108d0b1d00a4ebed338425f\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+90                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+90-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\82994868b108d0b1d00a4ebed338425f\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+91                android:value="androidx.startup" />
+91-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\82994868b108d0b1d00a4ebed338425f\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+92            <meta-data
+92-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\45155e17281434bffafb77929c12d3a3\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:29:13-31:52
+93                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+93-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\45155e17281434bffafb77929c12d3a3\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:30:17-78
+94                android:value="androidx.startup" />
+94-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\45155e17281434bffafb77929c12d3a3\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:31:17-49
+95            <meta-data
+95-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+96                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+97                android:value="androidx.startup" />
+97-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+98        </provider>
+99
+100        <receiver
+100-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+101            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+102            android:directBootAware="false"
+102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+103            android:enabled="true"
+103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+104            android:exported="true"
+104-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+105            android:permission="android.permission.DUMP" >
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+106            <intent-filter>
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+107                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+108            </intent-filter>
+109            <intent-filter>
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+110                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+111            </intent-filter>
+112            <intent-filter>
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+113                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+114            </intent-filter>
+115            <intent-filter>
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+116                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\24335a0611bb625ac598f2b0f5b38a4f\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+117            </intent-filter>
+118        </receiver>
+119    </application>
+120
+121</manifest>

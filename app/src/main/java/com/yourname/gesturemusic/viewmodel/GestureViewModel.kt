@@ -9,33 +9,37 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourname.gesturemusic.data.SettingsRepository
 import com.yourname.gesturemusic.service.GestureMusicService
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel для экрана управления.
- * Управляет состоянием сервиса, настройками чувствительности и отображением жестов.
- */
 class GestureViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context = application.applicationContext
+    private val settings = SettingsRepository(context)
 
     private val _isRunning = mutableStateOf(false)
     val isRunning: State<Boolean> = _isRunning
 
-    private val _lastGesture = mutableStateOf<String>("")
+    private val _lastGesture = mutableStateOf("")
     val lastGesture: State<String> = _lastGesture
 
-    private val _angleThreshold = mutableStateOf(22f)
+    private val _angleThreshold = mutableStateOf(settings.angleThreshold)
     val angleThreshold: State<Float> = _angleThreshold
 
-    private val _pinchThreshold = mutableStateOf(3.0f)
+    private val _pinchThreshold = mutableStateOf(settings.pinchThreshold)
     val pinchThreshold: State<Float> = _pinchThreshold
 
-    private val _isCalibrating = mutableStateOf(false)
-    val isCalibrating: State<Boolean> = _isCalibrating
+    // !!! Новые параметры для настройки длительности жеста
+    private val _minDuration = mutableStateOf(settings.minDuration)
+    val minDuration: State<Long> = _minDuration
+
+    private val _maxDuration = mutableStateOf(settings.maxDuration)
+    val maxDuration: State<Long> = _maxDuration
+
+    private val _saveMessage = mutableStateOf("")
+    val saveMessage: State<String> = _saveMessage
 
     private val gestureReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -57,6 +61,7 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
             IntentFilter("com.yourname.gesturemusic.GESTURE_DETECTED"),
             Context.RECEIVER_NOT_EXPORTED
         )
+        sendSensitivityUpdate()
     }
 
     fun startService() {
@@ -77,12 +82,39 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
 
     fun updateAngleThreshold(value: Float) {
         _angleThreshold.value = value
-        sendSensitivityUpdate()
     }
 
     fun updatePinchThreshold(value: Float) {
         _pinchThreshold.value = value
-        sendSensitivityUpdate()
+    }
+
+    fun updateMinDuration(value: Long) {
+        _minDuration.value = value
+    }
+
+    fun updateMaxDuration(value: Long) {
+        _maxDuration.value = value
+    }
+
+    fun saveSettings() {
+        viewModelScope.launch {
+            settings.angleThreshold = _angleThreshold.value
+            settings.pinchThreshold = _pinchThreshold.value
+            settings.minDuration = _minDuration.value
+            settings.maxDuration = _maxDuration.value
+            sendSensitivityUpdate()
+            _saveMessage.value = "✓ Сохранено"
+            delay(2000)
+            _saveMessage.value = ""
+        }
+    }
+
+    fun restoreDefaults() {
+        _angleThreshold.value = 22f
+        _pinchThreshold.value = 3.0f
+        _minDuration.value = 150L
+        _maxDuration.value = 600L
+        saveSettings()
     }
 
     private fun sendSensitivityUpdate() {
@@ -92,18 +124,6 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
             putExtra(GestureMusicService.EXTRA_PINCH_THRESHOLD, _pinchThreshold.value)
         }
         context.startService(intent)
-    }
-
-    fun calibrate() {
-        viewModelScope.launch {
-            _isCalibrating.value = true
-            _lastGesture.value = "Калибровка..."
-            // В реальном приложении здесь можно отправить команду сервису
-            // на снятие offset гироскопа
-            kotlinx.coroutines.delay(3000)
-            _isCalibrating.value = false
-            _lastGesture.value = "Калибровка завершена"
-        }
     }
 
     override fun onCleared() {
