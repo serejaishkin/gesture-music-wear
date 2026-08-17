@@ -32,6 +32,14 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    // Kotlin 1.9.24 is paired with Compose Compiler 1.5.14.
+    // Without this explicit version Gradle may select the old 1.3.2
+    // compiler, which only supports Kotlin 1.7.20.
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
+
     buildFeatures {
         compose = true
     }
