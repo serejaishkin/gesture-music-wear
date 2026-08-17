@@ -33,6 +33,8 @@ fun ControlScreen(
     val pinchThreshold by viewModel.pinchThreshold
     val minDuration by viewModel.minDuration
     val maxDuration by viewModel.maxDuration
+    val gestureCooldown by viewModel.gestureCooldown
+    val leftHand by viewModel.leftHand
     val saveMessage by viewModel.saveMessage
 
     Column(
@@ -54,6 +56,7 @@ fun ControlScreen(
         } else {
             MaterialTheme.colors.onSurfaceVariant
         }
+
         Text(
             text = if (isRunning) "● Слушаю жесты" else "○ Остановлено",
             color = statusColor,
@@ -63,7 +66,8 @@ fun ControlScreen(
 
         Button(
             onClick = {
-                if (isRunning) viewModel.stopService() else viewModel.startService()
+                if (isRunning) viewModel.stopService()
+                else viewModel.startService()
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.primaryButtonColors()
@@ -91,7 +95,6 @@ fun ControlScreen(
             valueFormatter = { "%.1f".format(it) }
         )
 
-        // !!! Новые слайдеры для длительности жеста
         SensitivitySlider(
             label = "Мин. время",
             value = minDuration.toFloat(),
@@ -108,6 +111,31 @@ fun ControlScreen(
             steps = 69,
             onValueChange = { viewModel.updateMaxDuration(it.toLong()) },
             valueFormatter = { "${it.toInt()}мс" }
+        )
+
+        SensitivitySlider(
+            label = "Пауза",
+            value = gestureCooldown.toFloat(),
+            valueRange = 300f..2000f,
+            steps = 16,
+            onValueChange = { viewModel.updateGestureCooldown(it.toLong()) },
+            valueFormatter = { "${(it / 100f).toString().removeSuffix("0").removeSuffix(".")}с" }
+        )
+
+        Button(
+            onClick = { viewModel.updateLeftHand(!leftHand) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.secondaryButtonColors()
+        ) {
+            Text(if (leftHand) "⌚ Левая рука" else "⌚ Правая рука")
+        }
+
+        Text(
+            text = "Выберите руку, на которой часы. " +
+                "Для левой руки направление поворота автоматически зеркалится.",
+            style = MaterialTheme.typography.caption3,
+            color = MaterialTheme.colors.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -148,8 +176,9 @@ fun ControlScreen(
         }
 
         Spacer(modifier = Modifier.height(2.dp))
+
         Text(
-            text = "➡️ вправо: prev\n⬅️ влево: next\n👌 щипок: play/pause",
+            text = "➡️ / ⬅️ треки\n👌 двойной щипок: play/pause",
             style = MaterialTheme.typography.caption3,
             color = MaterialTheme.colors.onSurfaceVariant,
             textAlign = TextAlign.Center

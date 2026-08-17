@@ -31,12 +31,17 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
     private val _pinchThreshold = mutableStateOf(settings.pinchThreshold)
     val pinchThreshold: State<Float> = _pinchThreshold
 
-    // !!! Новые параметры для настройки длительности жеста
     private val _minDuration = mutableStateOf(settings.minDuration)
     val minDuration: State<Long> = _minDuration
 
     private val _maxDuration = mutableStateOf(settings.maxDuration)
     val maxDuration: State<Long> = _maxDuration
+
+    private val _gestureCooldown = mutableStateOf(settings.gestureCooldown)
+    val gestureCooldown: State<Long> = _gestureCooldown
+
+    private val _leftHand = mutableStateOf(settings.leftHand)
+    val leftHand: State<Boolean> = _leftHand
 
     private val _saveMessage = mutableStateOf("")
     val saveMessage: State<String> = _saveMessage
@@ -96,13 +101,25 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
         _maxDuration.value = value
     }
 
+    fun updateGestureCooldown(value: Long) {
+        _gestureCooldown.value = value
+    }
+
+    fun updateLeftHand(value: Boolean) {
+        _leftHand.value = value
+    }
+
     fun saveSettings() {
         viewModelScope.launch {
             settings.angleThreshold = _angleThreshold.value
             settings.pinchThreshold = _pinchThreshold.value
             settings.minDuration = _minDuration.value
             settings.maxDuration = _maxDuration.value
+            settings.gestureCooldown = _gestureCooldown.value
+            settings.leftHand = _leftHand.value
+
             sendSensitivityUpdate()
+
             _saveMessage.value = "✓ Сохранено"
             delay(2000)
             _saveMessage.value = ""
@@ -114,6 +131,8 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
         _pinchThreshold.value = 3.0f
         _minDuration.value = 150L
         _maxDuration.value = 600L
+        _gestureCooldown.value = 1200L
+        _leftHand.value = false
         saveSettings()
     }
 
@@ -122,6 +141,8 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
             action = GestureMusicService.ACTION_UPDATE_SENSITIVITY
             putExtra(GestureMusicService.EXTRA_ANGLE_THRESHOLD, _angleThreshold.value)
             putExtra(GestureMusicService.EXTRA_PINCH_THRESHOLD, _pinchThreshold.value)
+            putExtra(GestureMusicService.EXTRA_COOLDOWN, _gestureCooldown.value)
+            putExtra(GestureMusicService.EXTRA_LEFT_HAND, _leftHand.value)
         }
         context.startService(intent)
     }
