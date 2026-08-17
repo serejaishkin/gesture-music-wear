@@ -34,8 +34,6 @@ android {
     }
 
     // Kotlin 1.9.24 is paired with Compose Compiler 1.5.14.
-    // Without this explicit version Gradle may select the old 1.3.2
-    // compiler, which only supports Kotlin 1.7.20.
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
@@ -48,6 +46,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -57,10 +56,7 @@ dependencies {
     implementation(libs.androidx.wear.compose.material)
     implementation(libs.androidx.wear.compose.foundation)
 
-    // Wear preview tooling: the old wear-tooling-preview artifact does not exist.
     implementation("androidx.wear.compose:compose-ui-tooling:1.3.1")
-
-    // Used by the gesture-training persistence layer.
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     testImplementation(libs.junit)
