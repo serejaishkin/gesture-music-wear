@@ -53,9 +53,11 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.wear.compose.material)
     implementation(libs.androidx.wear.compose.foundation)
-    implementation(libs.androidx.wear.tooling.preview)
 
-    // !!! kotlinx.serialization для GestureTrainer
+    // Wear preview tooling uses compose-ui-tooling, not the old/nonexistent
+    // androidx.wear.compose:wear-tooling-preview artifact.
+    implementation("androidx.wear.compose:compose-ui-tooling:1.3.1")
+
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     testImplementation(libs.junit)
