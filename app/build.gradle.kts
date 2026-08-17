@@ -1,8 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    kotlin("plugin.serialization") version "2.0.0"
+    kotlin("plugin.serialization") version "1.9.24"
 }
 
 android {
@@ -40,6 +39,9 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
 }
 
 dependencies {
@@ -54,11 +56,16 @@ dependencies {
     implementation(libs.androidx.wear.compose.material)
     implementation(libs.androidx.wear.compose.foundation)
 
+<<<<<<< Updated upstream
     // Wear preview tooling uses compose-ui-tooling, not the old/nonexistent
     // androidx.wear.compose:wear-tooling-preview artifact.
     implementation("androidx.wear.compose:compose-ui-tooling:1.3.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+=======
+    // kotlinx.serialization для GestureTrainer
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+>>>>>>> Stashed changes
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
