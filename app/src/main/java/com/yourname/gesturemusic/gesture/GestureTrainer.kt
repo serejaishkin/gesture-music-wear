@@ -6,22 +6,19 @@ import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
  * Обучаемый детектор жестов.
  *
- * Важное отличие от старой версии:
  * - образец нормализуется перед сравнением;
- * - используется настоящий Dynamic Time Warping (DTW), поэтому жест
- *   можно выполнить немного быстрее или медленнее;
- * - сравнение выполняется по относительной форме движения, а не по
- *   абсолютным значениям датчиков;
- * - добавлена минимальная энергия движения, чтобы лёгкое покачивание
- *   руки не считалось обученным жестом.
+ * - используется Dynamic Time Warping (DTW), поэтому жест можно выполнять
+ *   немного быстрее или медленнее;
+ * - сравнение идёт по форме движения, а не по абсолютному положению руки;
+ * - минимальная энергия движения защищает от лёгкого покачивания.
  *
- * Для каждого GestureType хранится один обученный шаблон. Это сохраняет
- * совместимость с существующим UI и SharedPreferences проекта.
+ * Для каждого GestureType хранится один обученный шаблон.
  */
 class GestureTrainer(context: Context) {
 
@@ -29,17 +26,9 @@ class GestureTrainer(context: Context) {
         private const val TAG = "GestureTrainer"
         private const val PREFS_NAME = "gesture_trainer"
         private const val KEY_GESTURES = "trained_gestures"
-
-        // Окно примерно 0.6–0.9 секунды при SENSOR_DELAY_GAME.
         private const val SAMPLE_SIZE = 45
         private const val MIN_SAMPLES = 18
-
-        // Чем меньше значение, тем строже совпадение.
-        // Значение намеренно небольшое после нормализации.
         private const val DTW_THRESHOLD = 1.15f
-
-        // Минимальная средняя энергия движения. Защищает от
-        // распознавания при почти неподвижной руке.
         private const val MIN_MOTION_ENERGY = 0.18f
     }
 
@@ -63,18 +52,14 @@ class GestureTrainer(context: Context) {
         val samples: List<Sample>
     )
 
-    init {
-        loadGestures()
-    }
+    init { loadGestures() }
 
-    /** Начать запись одного обучающего образца. */
     fun startRecording() {
         isRecording = true
         currentRecording.clear()
         Log.d(TAG, "Recording started")
     }
 
-    /** Добавить очередной пакет gyro + linear acceleration. */
     fun addSample(
         gx: Float, gy: Float, gz: Float,
         ax: Float, ay: Float, az: Float
@@ -88,13 +73,6 @@ class GestureTrainer(context: Context) {
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
     }
 
-    /**
-     * Завершить обучение.
-     *
-     * Перед сохранением убираем постоянную составляющую каждого канала
-     * и масштабируем его. Благодаря этому положение руки и сила конкретного
-     * движения меньше влияют на результат.
-     */
     fun stopRecording(gestureType: GestureType): Boolean {
         isRecording = false
         if (currentRecording.size < MIN_SAMPLES) {
@@ -104,21 +82,13 @@ class GestureTrainer(context: Context) {
         }
 
         val normalized = normalize(currentRecording)
-        val gesture = TrainedGesture(gestureType.name, normalized)
-        trainedGestures[gestureType] = gesture
+        trainedGestures[gestureType] = TrainedGesture(gestureType.name, normalized)
         saveGestures()
         currentRecording.clear()
-
         Log.d(TAG, "Saved DTW template: $gestureType, ${normalized.size} samples")
         return true
     }
 
-    /**
-     * Проверить текущее скользящее окно на обученный жест.
-     *
-     * Возвращается только действительно хорошее совпадение. Если движение
-     * слабое или расстояние DTW выше порога — возвращаем null.
-     */
     fun recognize(
         gx: Float, gy: Float, gz: Float,
         ax: Float, ay: Float, az: Float
@@ -126,17 +96,12 @@ class GestureTrainer(context: Context) {
         if (isRecording || trainedGestures.isEmpty()) return null
 
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
-        if (currentRecording.size > SAMPLE_SIZE) {
-            currentRecording.removeAt(0)
-        }
+        if (currentRecording.size > SAMPLE_SIZE) currentRecording.removeAt(0)
         if (currentRecording.size < MIN_SAMPLES) return null
 
-        // Сначала проверяем, есть ли вообще заметное движение.
-        val energy = motionEnergy(currentRecording)
-        if (energy < MIN_MOTION_ENERGY) return null
+        if (motionEnergy(currentRecording) < MIN_MOTION_ENERGY) return null
 
         val candidate = normalize(currentRecording)
-
         var bestMatch: GestureType? = null
         var bestScore = Float.MAX_VALUE
 
@@ -150,12 +115,9 @@ class GestureTrainer(context: Context) {
 
         if (bestMatch != null && bestScore <= DTW_THRESHOLD) {
             Log.d(TAG, "Recognized learned gesture: $bestMatch, DTW=$bestScore")
-            // После совпадения начинаем новое окно, чтобы один жест
-            // не срабатывал несколько раз подряд.
             currentRecording.clear()
             return bestMatch
         }
-
         return null
     }
 
@@ -167,16 +129,12 @@ class GestureTrainer(context: Context) {
     }
 
     fun hasTrainedGesture(type: GestureType): Boolean = trainedGestures.containsKey(type)
-
     fun isCurrentlyRecording(): Boolean = isRecording
-
     fun getRecordingProgress(): Int =
         (currentRecording.size * 100 / SAMPLE_SIZE).coerceIn(0, 100)
 
-    /** Центрирование + RMS-нормализация шести сенсорных каналов. */
     private fun normalize(input: List<Sample>): List<Sample> {
         if (input.isEmpty()) return emptyList()
-
         fun mean(selector: (Sample) -> Float): Float =
             input.sumOf { selector(it).toDouble() }.toFloat() / input.size
 
@@ -211,7 +169,6 @@ class GestureTrainer(context: Context) {
         }
     }
 
-    /** Средняя величина движения по шести каналам. */
     private fun motionEnergy(samples: List<Sample>): Float {
         if (samples.size < 2) return 0f
         var sum = 0f
@@ -231,53 +188,35 @@ class GestureTrainer(context: Context) {
         ax: Float, ay: Float, az: Float
     ): Float = sqrt(gx * gx + gy * gy + gz * gz + ax * ax + ay * ay + az * az)
 
-    /**
-     * Настоящий DTW: допускает растяжение/сжатие времени движения.
-     */
     private fun dtwDistance(a: List<Sample>, b: List<Sample>): Float {
         if (a.isEmpty() || b.isEmpty()) return Float.MAX_VALUE
-
         val dp = Array(a.size + 1) {
             FloatArray(b.size + 1) { Float.POSITIVE_INFINITY }
         }
         dp[0][0] = 0f
-
-        for (i in 1..a.size) {
-            for (j in 1..b.size) {
-                val cost = sampleDistance(a[i - 1], b[j - 1])
-                dp[i][j] = cost + minOf(
-                    dp[i - 1][j],
-                    dp[i][j - 1],
-                    dp[i - 1][j - 1]
-                )
-            }
+        for (i in 1..a.size) for (j in 1..b.size) {
+            val cost = sampleDistance(a[i - 1], b[j - 1])
+            dp[i][j] = cost + minOf(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
         }
-
         return dp[a.size][b.size] / (a.size + b.size).toFloat()
     }
 
-    private fun sampleDistance(a: Sample, b: Sample): Float =
-        absMagnitude(
-            a.gx - b.gx, a.gy - b.gy, a.gz - b.gz,
-            a.ax - b.ax, a.ay - b.ay, a.az - b.az
-        )
+    private fun sampleDistance(a: Sample, b: Sample): Float = absMagnitude(
+        a.gx - b.gx, a.gy - b.gy, a.gz - b.gz,
+        a.ax - b.ax, a.ay - b.ay, a.az - b.az
+    )
 
     private fun saveGestures() {
-        val data = json.encodeToString(trainedGestures.values.toList())
-        prefs.edit().putString(KEY_GESTURES, data).apply()
+        prefs.edit().putString(KEY_GESTURES, json.encodeToString(trainedGestures.values.toList())).apply()
     }
 
     private fun loadGestures() {
         val data = prefs.getString(KEY_GESTURES, null) ?: return
         try {
-            val list = json.decodeFromString<List<TrainedGesture>>(data)
             trainedGestures.clear()
-            for (g in list) {
-                try {
-                    trainedGestures[GestureType.valueOf(g.gestureType)] = g
-                } catch (_: IllegalArgumentException) {
-                    Log.w(TAG, "Unknown stored gesture: ${g.gestureType}")
-                }
+            json.decodeFromString<List<TrainedGesture>>(data).forEach { g ->
+                try { trainedGestures[GestureType.valueOf(g.gestureType)] = g }
+                catch (_: IllegalArgumentException) { Log.w(TAG, "Unknown stored gesture: ${g.gestureType}") }
             }
             Log.d(TAG, "Loaded ${trainedGestures.size} trained gestures")
         } catch (e: Exception) {
