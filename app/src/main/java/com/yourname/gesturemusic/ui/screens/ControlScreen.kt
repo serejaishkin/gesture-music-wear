@@ -11,6 +11,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -27,14 +30,19 @@ import com.yourname.gesturemusic.viewmodel.GestureViewModel
 fun ControlScreen(
     viewModel: GestureViewModel = viewModel()
 ) {
+    var showTraining by remember { mutableStateOf(false) }
+
+    if (showTraining) {
+        TrainingScreen(onBack = { showTraining = false })
+        return
+    }
+
     val isRunning by viewModel.isRunning
     val lastGesture by viewModel.lastGesture
     val angleThreshold by viewModel.angleThreshold
     val pinchThreshold by viewModel.pinchThreshold
     val minDuration by viewModel.minDuration
     val maxDuration by viewModel.maxDuration
-    val gestureCooldown by viewModel.gestureCooldown
-    val leftHand by viewModel.leftHand
     val saveMessage by viewModel.saveMessage
 
     Column(
@@ -56,7 +64,6 @@ fun ControlScreen(
         } else {
             MaterialTheme.colors.onSurfaceVariant
         }
-
         Text(
             text = if (isRunning) "● Слушаю жесты" else "○ Остановлено",
             color = statusColor,
@@ -66,8 +73,7 @@ fun ControlScreen(
 
         Button(
             onClick = {
-                if (isRunning) viewModel.stopService()
-                else viewModel.startService()
+                if (isRunning) viewModel.stopService() else viewModel.startService()
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.primaryButtonColors()
@@ -113,31 +119,6 @@ fun ControlScreen(
             valueFormatter = { "${it.toInt()}мс" }
         )
 
-        SensitivitySlider(
-            label = "Пауза",
-            value = gestureCooldown.toFloat(),
-            valueRange = 300f..2000f,
-            steps = 16,
-            onValueChange = { viewModel.updateGestureCooldown(it.toLong()) },
-            valueFormatter = { "${(it / 100f).toString().removeSuffix("0").removeSuffix(".")}с" }
-        )
-
-        Button(
-            onClick = { viewModel.updateLeftHand(!leftHand) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.secondaryButtonColors()
-        ) {
-            Text(if (leftHand) "⌚ Левая рука" else "⌚ Правая рука")
-        }
-
-        Text(
-            text = "Выберите руку, на которой часы. " +
-                "Для левой руки направление поворота автоматически зеркалится.",
-            style = MaterialTheme.typography.caption3,
-            color = MaterialTheme.colors.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-
         Spacer(modifier = Modifier.height(2.dp))
 
         Button(
@@ -154,6 +135,15 @@ fun ControlScreen(
             colors = ButtonDefaults.secondaryButtonColors()
         ) {
             Text("↺ Сбросить")
+        }
+
+        // !!! Кнопка обучения
+        Button(
+            onClick = { showTraining = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.secondaryButtonColors()
+        ) {
+            Text("🎓 Обучение")
         }
 
         if (saveMessage.isNotEmpty()) {
@@ -176,9 +166,8 @@ fun ControlScreen(
         }
 
         Spacer(modifier = Modifier.height(2.dp))
-
         Text(
-            text = "➡️ / ⬅️ треки\n👌 двойной щипок: play/pause",
+            text = "➡️ вправо: prev\n⬅️ влево: next\n👌 щипок: play/pause",
             style = MaterialTheme.typography.caption3,
             color = MaterialTheme.colors.onSurfaceVariant,
             textAlign = TextAlign.Center
