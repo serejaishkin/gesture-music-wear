@@ -27,11 +27,8 @@ import com.yourname.gesturemusic.ui.components.SensitivitySlider
 import com.yourname.gesturemusic.viewmodel.GestureViewModel
 
 @Composable
-fun ControlScreen(
-    viewModel: GestureViewModel = viewModel()
-) {
+fun ControlScreen(viewModel: GestureViewModel = viewModel()) {
     var showTraining by remember { mutableStateOf(false) }
-
     if (showTraining) {
         TrainingScreen(onBack = { showTraining = false })
         return
@@ -43,134 +40,42 @@ fun ControlScreen(
     val pinchThreshold by viewModel.pinchThreshold
     val minDuration by viewModel.minDuration
     val maxDuration by viewModel.maxDuration
+    val gestureCooldown by viewModel.gestureCooldown
+    val leftHand by viewModel.leftHand
     val saveMessage by viewModel.saveMessage
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(
-            text = "🎵 Gesture Music",
-            style = MaterialTheme.typography.title3,
-            textAlign = TextAlign.Center
-        )
+        Text("🎵 Gesture Music", style = MaterialTheme.typography.title3, textAlign = TextAlign.Center)
+        Text(if (isRunning) "● Слушаю жесты" else "○ Остановлено", color = if (isRunning) MaterialTheme.colors.primary else MaterialTheme.colors.onSurfaceVariant, style = MaterialTheme.typography.body2, textAlign = TextAlign.Center)
 
-        val statusColor = if (isRunning) {
-            MaterialTheme.colors.primary
-        } else {
-            MaterialTheme.colors.onSurfaceVariant
-        }
-        Text(
-            text = if (isRunning) "● Слушаю жесты" else "○ Остановлено",
-            color = statusColor,
-            style = MaterialTheme.typography.body2,
-            textAlign = TextAlign.Center
-        )
-
-        Button(
-            onClick = {
-                if (isRunning) viewModel.stopService() else viewModel.startService()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.primaryButtonColors()
-        ) {
+        Button(onClick = { if (isRunning) viewModel.stopService() else viewModel.startService() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.primaryButtonColors()) {
             Text(if (isRunning) "⏹ Стоп" else "▶️ Старт")
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
-
-        SensitivitySlider(
-            label = "Поворот",
-            value = angleThreshold,
-            valueRange = 15f..35f,
-            steps = 19,
-            onValueChange = viewModel::updateAngleThreshold,
-            valueFormatter = { "%.0f°".format(it) }
-        )
-
-        SensitivitySlider(
-            label = "Щипок",
-            value = pinchThreshold,
-            valueRange = 2.0f..5.0f,
-            steps = 29,
-            onValueChange = viewModel::updatePinchThreshold,
-            valueFormatter = { "%.1f".format(it) }
-        )
-
-        SensitivitySlider(
-            label = "Мин. время",
-            value = minDuration.toFloat(),
-            valueRange = 50f..300f,
-            steps = 24,
-            onValueChange = { viewModel.updateMinDuration(it.toLong()) },
-            valueFormatter = { "${it.toInt()}мс" }
-        )
-
-        SensitivitySlider(
-            label = "Макс. время",
-            value = maxDuration.toFloat(),
-            valueRange = 300f..1000f,
-            steps = 69,
-            onValueChange = { viewModel.updateMaxDuration(it.toLong()) },
-            valueFormatter = { "${it.toInt()}мс" }
-        )
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Button(
-            onClick = viewModel::saveSettings,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.secondaryButtonColors()
-        ) {
-            Text("💾 Сохранить")
+        Button(onClick = { viewModel.updateLeftHand(!leftHand) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.secondaryButtonColors()) {
+            Text(if (leftHand) "⌚ Левая рука" else "⌚ Правая рука")
         }
 
-        Button(
-            onClick = viewModel::restoreDefaults,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.secondaryButtonColors()
-        ) {
-            Text("↺ Сбросить")
-        }
+        SensitivitySlider("Поворот", angleThreshold, 15f..35f, 19, viewModel::updateAngleThreshold) { "%.0f°".format(it) }
+        SensitivitySlider("Щипок", pinchThreshold, 2.0f..5.0f, 29, viewModel::updatePinchThreshold) { "%.1f".format(it) }
+        SensitivitySlider("Мин. время", minDuration.toFloat(), 50f..300f, 24, { viewModel.updateMinDuration(it.toLong()) }) { "${it.toInt()}мс" }
+        SensitivitySlider("Макс. время", maxDuration.toFloat(), 300f..1000f, 69, { viewModel.updateMaxDuration(it.toLong()) }) { "${it.toInt()}мс" }
+        SensitivitySlider("Пауза между жестами", gestureCooldown.toFloat(), 600f..2500f, 19, { viewModel.updateGestureCooldown(it.toLong()) }) { "${it.toInt()}мс" }
 
-        // !!! Кнопка обучения
-        Button(
-            onClick = { showTraining = true },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.secondaryButtonColors()
-        ) {
-            Text("🎓 Обучение")
-        }
+        Button(onClick = viewModel::saveSettings, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.secondaryButtonColors()) { Text("💾 Сохранить") }
+        Button(onClick = viewModel::restoreDefaults, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.secondaryButtonColors()) { Text("↺ Сбросить") }
+        Button(onClick = { showTraining = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.secondaryButtonColors()) { Text("🎓 Обучение") }
 
-        if (saveMessage.isNotEmpty()) {
-            Text(
-                text = saveMessage,
-                style = MaterialTheme.typography.caption3,
-                color = MaterialTheme.colors.secondary,
-                textAlign = TextAlign.Center
-            )
-        }
-
+        if (saveMessage.isNotEmpty()) Text(saveMessage, style = MaterialTheme.typography.caption3, color = MaterialTheme.colors.secondary, textAlign = TextAlign.Center)
         if (lastGesture.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = lastGesture,
-                style = MaterialTheme.typography.caption3,
-                color = MaterialTheme.colors.secondary,
-                textAlign = TextAlign.Center
-            )
+            Spacer(Modifier.height(2.dp))
+            Text(lastGesture, style = MaterialTheme.typography.caption3, color = MaterialTheme.colors.secondary, textAlign = TextAlign.Center)
         }
-
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = "➡️ вправо: prev\n⬅️ влево: next\n👌 щипок: play/pause",
-            style = MaterialTheme.typography.caption3,
-            color = MaterialTheme.colors.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+        Spacer(Modifier.height(2.dp))
+        Text("➡️ вправо: prev\n⬅️ влево: next\n👌 щипок: play/pause", style = MaterialTheme.typography.caption3, color = MaterialTheme.colors.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
