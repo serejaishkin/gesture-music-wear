@@ -9,218 +9,165 @@ import kotlinx.serialization.json.Json
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/**
- * Обучаемый детектор жестов.
- *
- * - образец нормализуется перед сравнением;
- * - используется Dynamic Time Warping (DTW), поэтому жест можно выполнять
- *   немного быстрее или медленнее;
- * - сравнение идёт по форме движения, а не по абсолютному положению руки;
- * - минимальная энергия движения защищает от лёгкого покачивания.
- *
- * Для каждого GestureType хранится один обученный шаблон.
- */
+/** Five-repetition gesture training with DTW validation. */
 class GestureTrainer(context: Context) {
-
     companion object {
         private const val TAG = "GestureTrainer"
         private const val PREFS_NAME = "gesture_trainer"
         private const val KEY_GESTURES = "trained_gestures"
         private const val SAMPLE_SIZE = 45
         private const val MIN_SAMPLES = 18
+        private const val TRAINING_REPETITIONS = 5
         private const val DTW_THRESHOLD = 1.15f
+        private const val TRAINING_VARIANCE_THRESHOLD = 1.40f
         private const val MIN_MOTION_ENERGY = 0.18f
     }
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
-
     private var isRecording = false
     private var currentRecording = mutableListOf<Sample>()
+    private val repetitions = mutableListOf<List<Sample>>()
     private val trainedGestures = mutableMapOf<GestureType, TrainedGesture>()
 
-    @Serializable
-    data class Sample(
-        val gx: Float, val gy: Float, val gz: Float,
-        val ax: Float, val ay: Float, val az: Float
-    )
-
-    @Serializable
-    data class TrainedGesture(
-        val gestureType: String,
-        val samples: List<Sample>
-    )
+    @Serializable data class Sample(val gx: Float, val gy: Float, val gz: Float, val ax: Float, val ay: Float, val az: Float)
+    @Serializable data class TrainedGesture(val gestureType: String, val samples: List<Sample>)
 
     init { loadGestures() }
 
-    fun startRecording() {
+    fun startTraining() {
         isRecording = true
         currentRecording.clear()
-        Log.d(TAG, "Recording started")
+        repetitions.clear()
+        Log.d(TAG, "5-repetition training started")
     }
 
-    fun addSample(
-        gx: Float, gy: Float, gz: Float,
-        ax: Float, ay: Float, az: Float
-    ) {
-        if (!isRecording) return
-        if (currentRecording.size >= SAMPLE_SIZE) {
-            isRecording = false
-            Log.d(TAG, "Recording auto-stopped: max samples reached")
-            return
-        }
+    fun startRecording() {
+        if (!isRecording) isRecording = true
+        currentRecording.clear()
+    }
+
+    fun addSample(gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float) {
+        if (!isRecording || currentRecording.size >= SAMPLE_SIZE) return
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
     }
 
-    fun stopRecording(gestureType: GestureType): Boolean {
-        isRecording = false
-        if (currentRecording.size < MIN_SAMPLES) {
-            Log.w(TAG, "Recording too short: ${currentRecording.size} samples")
-            currentRecording.clear()
-            return false
-        }
-
-        val normalized = normalize(currentRecording)
-        trainedGestures[gestureType] = TrainedGesture(gestureType.name, normalized)
-        saveGestures()
+    /** Finishes the current repetition. Returns true when it was accepted. */
+    fun finishRepetition(): Boolean {
+        if (!isRecording) return false
+        val sample = currentRecording.toList()
         currentRecording.clear()
-        Log.d(TAG, "Saved DTW template: $gestureType, ${normalized.size} samples")
+        if (sample.size < MIN_SAMPLES || motionEnergy(sample) < MIN_MOTION_ENERGY) return false
+        repetitions += normalize(sample)
+        if (repetitions.size >= TRAINING_REPETITIONS) isRecording = false
         return true
     }
 
-    fun recognize(
-        gx: Float, gy: Float, gz: Float,
-        ax: Float, ay: Float, az: Float
-    ): GestureType? {
-        if (isRecording || trainedGestures.isEmpty()) return null
+    /** Compatibility: finishes the current repetition and saves after 5 accepted repetitions. */
+    fun stopRecording(gestureType: GestureType): Boolean {
+        if (currentRecording.size >= MIN_SAMPLES) finishRepetition() else currentRecording.clear()
+        isRecording = false
+        if (repetitions.size < TRAINING_REPETITIONS) {
+            Log.w(TAG, "Training incomplete: ${repetitions.size}/$TRAINING_REPETITIONS")
+            return false
+        }
+        val template = chooseTemplate() ?: run { repetitions.clear(); return false }
+        trainedGestures[gestureType] = TrainedGesture(gestureType.name, template)
+        saveGestures()
+        repetitions.clear()
+        currentRecording.clear()
+        Log.d(TAG, "Saved validated 5-repetition template: $gestureType")
+        return true
+    }
 
+    fun cancelTraining() {
+        isRecording = false
+        currentRecording.clear()
+        repetitions.clear()
+    }
+
+    fun getTrainingRepetitionCount(): Int = repetitions.size
+    fun getRequiredRepetitions(): Int = TRAINING_REPETITIONS
+    fun getRecordingProgress(): Int = (currentRecording.size * 100 / SAMPLE_SIZE).coerceIn(0, 100)
+
+    fun recognize(gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float): GestureType? {
+        if (isRecording || trainedGestures.isEmpty()) return null
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
         if (currentRecording.size > SAMPLE_SIZE) currentRecording.removeAt(0)
-        if (currentRecording.size < MIN_SAMPLES) return null
-
-        if (motionEnergy(currentRecording) < MIN_MOTION_ENERGY) return null
-
+        if (currentRecording.size < MIN_SAMPLES || motionEnergy(currentRecording) < MIN_MOTION_ENERGY) return null
         val candidate = normalize(currentRecording)
         var bestMatch: GestureType? = null
         var bestScore = Float.MAX_VALUE
-
         for ((type, trained) in trainedGestures) {
             val score = dtwDistance(candidate, trained.samples)
-            if (score < bestScore) {
-                bestScore = score
-                bestMatch = type
-            }
+            if (score < bestScore) { bestScore = score; bestMatch = type }
         }
-
         if (bestMatch != null && bestScore <= DTW_THRESHOLD) {
-            Log.d(TAG, "Recognized learned gesture: $bestMatch, DTW=$bestScore")
             currentRecording.clear()
+            Log.d(TAG, "Recognized learned gesture: $bestMatch DTW=$bestScore")
             return bestMatch
         }
         return null
     }
 
     fun clearAll() {
-        trainedGestures.clear()
-        currentRecording.clear()
+        trainedGestures.clear(); currentRecording.clear(); repetitions.clear()
         prefs.edit().remove(KEY_GESTURES).apply()
-        Log.d(TAG, "All gestures cleared")
     }
 
     fun hasTrainedGesture(type: GestureType): Boolean = trainedGestures.containsKey(type)
     fun isCurrentlyRecording(): Boolean = isRecording
-    fun getRecordingProgress(): Int =
-        (currentRecording.size * 100 / SAMPLE_SIZE).coerceIn(0, 100)
+
+    private fun chooseTemplate(): List<Sample>? {
+        if (repetitions.size < TRAINING_REPETITIONS) return null
+        var best = repetitions.first()
+        var bestScore = Float.MAX_VALUE
+        for (candidate in repetitions) {
+            val score = repetitions.sumOf { dtwDistance(candidate, it).toDouble() }.toFloat() / repetitions.size
+            if (score < bestScore) { bestScore = score; best = candidate }
+        }
+        return if (bestScore <= TRAINING_VARIANCE_THRESHOLD) best else null
+    }
 
     private fun normalize(input: List<Sample>): List<Sample> {
         if (input.isEmpty()) return emptyList()
-        fun mean(selector: (Sample) -> Float): Float =
-            input.sumOf { selector(it).toDouble() }.toFloat() / input.size
-
-        val means = floatArrayOf(
-            mean { it.gx }, mean { it.gy }, mean { it.gz },
-            mean { it.ax }, mean { it.ay }, mean { it.az }
-        )
-
-        fun rms(index: Int, selector: (Sample) -> Float): Float {
+        fun mean(s: (Sample) -> Float) = input.sumOf { s(it).toDouble() }.toFloat() / input.size
+        val m = floatArrayOf(mean { it.gx }, mean { it.gy }, mean { it.gz }, mean { it.ax }, mean { it.ay }, mean { it.az })
+        fun rms(i: Int, s: (Sample) -> Float): Float {
             var sum = 0.0
-            for (s in input) {
-                val d = selector(s) - means[index]
-                sum += d * d
-            }
+            input.forEach { val d = s(it) - m[i]; sum += d * d }
             return sqrt(sum / input.size).toFloat().coerceAtLeast(0.001f)
         }
-
-        val scales = floatArrayOf(
-            rms(0) { it.gx }, rms(1) { it.gy }, rms(2) { it.gz },
-            rms(3) { it.ax }, rms(4) { it.ay }, rms(5) { it.az }
-        )
-
-        return input.map {
-            Sample(
-                (it.gx - means[0]) / scales[0],
-                (it.gy - means[1]) / scales[1],
-                (it.gz - means[2]) / scales[2],
-                (it.ax - means[3]) / scales[3],
-                (it.ay - means[4]) / scales[4],
-                (it.az - means[5]) / scales[5]
-            )
-        }
+        val scale = floatArrayOf(rms(0){it.gx}, rms(1){it.gy}, rms(2){it.gz}, rms(3){it.ax}, rms(4){it.ay}, rms(5){it.az})
+        return input.map { Sample((it.gx-m[0])/scale[0], (it.gy-m[1])/scale[1], (it.gz-m[2])/scale[2], (it.ax-m[3])/scale[3], (it.ay-m[4])/scale[4], (it.az-m[5])/scale[5]) }
     }
 
-    private fun motionEnergy(samples: List<Sample>): Float {
-        if (samples.size < 2) return 0f
-        var sum = 0f
-        for (i in 1 until samples.size) {
-            val a = samples[i - 1]
-            val b = samples[i]
-            sum += absMagnitude(
-                b.gx - a.gx, b.gy - a.gy, b.gz - a.gz,
-                b.ax - a.ax, b.ay - a.ay, b.az - a.az
-            )
+    private fun motionEnergy(s: List<Sample>): Float {
+        if (s.size < 2) return 0f
+        var total = 0f
+        for (i in 1 until s.size) {
+            val a = s[i-1]; val b = s[i]
+            total += sqrt((b.gx-a.gx)*(b.gx-a.gx)+(b.gy-a.gy)*(b.gy-a.gy)+(b.gz-a.gz)*(b.gz-a.gz)+(b.ax-a.ax)*(b.ax-a.ax)+(b.ay-a.ay)*(b.ay-a.ay)+(b.az-a.az)*(b.az-a.az))
         }
-        return sum / (samples.size - 1)
+        return total / (s.size - 1)
     }
-
-    private fun absMagnitude(
-        gx: Float, gy: Float, gz: Float,
-        ax: Float, ay: Float, az: Float
-    ): Float = sqrt(gx * gx + gy * gy + gz * gz + ax * ax + ay * ay + az * az)
 
     private fun dtwDistance(a: List<Sample>, b: List<Sample>): Float {
-        if (a.isEmpty() || b.isEmpty()) return Float.MAX_VALUE
-        val dp = Array(a.size + 1) {
-            FloatArray(b.size + 1) { Float.POSITIVE_INFINITY }
-        }
+        val dp = Array(a.size + 1) { FloatArray(b.size + 1) { Float.POSITIVE_INFINITY } }
         dp[0][0] = 0f
         for (i in 1..a.size) for (j in 1..b.size) {
-            val cost = sampleDistance(a[i - 1], b[j - 1])
-            dp[i][j] = cost + minOf(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+            val x=a[i-1]; val y=b[j-1]
+            val cost=sqrt((x.gx-y.gx)*(x.gx-y.gx)+(x.gy-y.gy)*(x.gy-y.gy)+(x.gz-y.gz)*(x.gz-y.gz)+(x.ax-y.ax)*(x.ax-y.ax)+(x.ay-y.ay)*(x.ay-y.ay)+(x.az-y.az)*(x.az-y.az))
+            dp[i][j]=cost+minOf(dp[i-1][j],dp[i][j-1],dp[i-1][j-1])
         }
-        return dp[a.size][b.size] / (a.size + b.size).toFloat()
+        return dp[a.size][b.size]/(a.size+b.size).toFloat()
     }
 
-    private fun sampleDistance(a: Sample, b: Sample): Float = absMagnitude(
-        a.gx - b.gx, a.gy - b.gy, a.gz - b.gz,
-        a.ax - b.ax, a.ay - b.ay, a.az - b.az
-    )
-
-    private fun saveGestures() {
-        prefs.edit().putString(KEY_GESTURES, json.encodeToString(trainedGestures.values.toList())).apply()
-    }
+    private fun saveGestures() = prefs.edit().putString(KEY_GESTURES, json.encodeToString(trainedGestures.values.toList())).apply()
 
     private fun loadGestures() {
-        val data = prefs.getString(KEY_GESTURES, null) ?: return
-        try {
-            trainedGestures.clear()
-            json.decodeFromString<List<TrainedGesture>>(data).forEach { g ->
-                try { trainedGestures[GestureType.valueOf(g.gestureType)] = g }
-                catch (_: IllegalArgumentException) { Log.w(TAG, "Unknown stored gesture: ${g.gestureType}") }
-            }
-            Log.d(TAG, "Loaded ${trainedGestures.size} trained gestures")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load gestures", e)
-        }
+        val data=prefs.getString(KEY_GESTURES,null) ?: return
+        try { json.decodeFromString<List<TrainedGesture>>(data).forEach { g -> try { trainedGestures[GestureType.valueOf(g.gestureType)] = g } catch (_: IllegalArgumentException) {} } }
+        catch (e: Exception) { Log.e(TAG,"Failed to load gestures",e) }
     }
 }
