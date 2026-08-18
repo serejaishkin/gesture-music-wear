@@ -23,6 +23,7 @@ import androidx.core.app.NotificationCompat
 import com.yourname.gesturemusic.MainActivity
 import com.yourname.gesturemusic.R
 import com.yourname.gesturemusic.gesture.DoublePinchDetector
+import com.yourname.gesturemusic.gesture.GestureArmingManager
 import com.yourname.gesturemusic.gesture.GestureTrainer
 import com.yourname.gesturemusic.gesture.GestureType
 import com.yourname.gesturemusic.gesture.WristRotationDetector
@@ -60,6 +61,7 @@ class GestureMusicService : Service(), SensorEventListener {
     private lateinit var wristDetector: WristRotationDetector
     private lateinit var pinchDetector: DoublePinchDetector
     private lateinit var gestureTrainer: GestureTrainer
+    private lateinit var armingManager: GestureArmingManager
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var vibrator: Vibrator
     private lateinit var notificationManager: NotificationManager
@@ -104,6 +106,7 @@ class GestureMusicService : Service(), SensorEventListener {
         wristDetector = WristRotationDetector()
         pinchDetector = DoublePinchDetector()
         gestureTrainer = GestureTrainer(this)
+        armingManager = GestureArmingManager()
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GestureMusic::WakeLock")
@@ -185,11 +188,25 @@ class GestureMusicService : Service(), SensorEventListener {
     private fun processGestures(timestamp: Long) {
         if (screenOffTime > 0 && timestamp - screenOffTime < SCREEN_OFF_BLOCK_MS) return
         if (timestamp - lastGestureTime < GESTURE_COOLDOWN_MS) return
+        armingManager.update(timestamp)
 
         val trainedGesture = gestureTrainer.recognize(
             lastGyroX, lastGyroY, lastGyroZ,
             lastLinAccX, lastLinAccY, lastLinAccZ
         )
+
+        // A learned ACTIVATE gesture is deliberately checked before all media commands.
+        if (trainedGesture == GestureType.ACTIVATE) {
+            armingManager.activate(timestamp)
+            lastGestureTime = timestamp
+            vibrateLong()
+            sendBroadcast(Intent("com.yourname.gesturemusic.GESTURE_DETECTED").apply { putExtra("gesture", GestureType.ACTIVATE.name) })
+            return
+        }
+
+        // If an activation template exists, normal commands stay locked until activation.
+        if (gestureTrainer.hasTrainedGesture(GestureType.ACTIVATE) && !armingManager.isArmed) return
+
         val gesture = trainedGesture ?: run {
             val wristGesture = wristDetector.process(
                 timestamp, lastGyroX, lastGyroY, lastGyroZ,
@@ -201,16 +218,26 @@ class GestureMusicService : Service(), SensorEventListener {
             )
             wristGesture ?: pinchGesture
         }
-        gesture?.let { executeGesture(it, timestamp) }
+        gesture?.let {
+            armingManager.touch(timestamp)
+            executeGesture(it, timestamp)
+        }
     }
 
     private fun executeGesture(gesture: GestureType, timestamp: Long = System.currentTimeMillis()) {
+        if (gesture == GestureType.ACTIVATE) {
+            armingManager.activate(timestamp)
+            lastGestureTime = timestamp
+            vibrateLong()
+            return
+        }
         lastGestureTime = timestamp
         vibrate()
         when (gesture) {
             GestureType.NEXT_TRACK -> mediaControllerManager.nextTrack()
             GestureType.PREVIOUS_TRACK -> mediaControllerManager.previousTrack()
             GestureType.PLAY_PAUSE -> mediaControllerManager.playPause()
+            GestureType.ACTIVATE -> Unit
         }
         sendBroadcast(Intent("com.yourname.gesturemusic.GESTURE_DETECTED").apply { putExtra("gesture", gesture.name) })
     }
@@ -234,6 +261,7 @@ class GestureMusicService : Service(), SensorEventListener {
 
     private fun clearTraining() {
         gestureTrainer.clearAll()
+        armingManager.deactivate()
     }
 
     private fun startGestureDetection() {
@@ -255,6 +283,7 @@ class GestureMusicService : Service(), SensorEventListener {
         if (wakeLock.isHeld) wakeLock.release()
         wristDetector.reset()
         pinchDetector.reset()
+        armingManager.deactivate()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
