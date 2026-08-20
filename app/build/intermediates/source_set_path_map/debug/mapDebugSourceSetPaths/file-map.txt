@@ -44,10 +44,10 @@ com.yourname.gesturemusic.app-savedstate-ktx-1.2.1-42 C:\Users\sergejj\.gradle\c
 com.yourname.gesturemusic.app-runtime-release-43 C:\Users\sergejj\.gradle\caches\transforms-4\dc1679b8a1a80aff01f7bf3086ef1ee9\transformed\runtime-release\res
 com.yourname.gesturemusic.app-material-release-44 C:\Users\sergejj\.gradle\caches\transforms-4\e44683d410791d1f169595404e771554\transformed\material-release\res
 com.yourname.gesturemusic.app-customview-poolingcontainer-1.0.0-45 C:\Users\sergejj\.gradle\caches\transforms-4\fc02b61d6d152f49478372592e9bd89c\transformed\customview-poolingcontainer-1.0.0\res
-com.yourname.gesturemusic.app-pngs-46 C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\build\generated\res\pngs\debug
-com.yourname.gesturemusic.app-resValues-47 C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\build\generated\res\resValues\debug
-com.yourname.gesturemusic.app-packageDebugResources-48 C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.yourname.gesturemusic.app-packageDebugResources-49 C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.yourname.gesturemusic.app-debug-50 C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.yourname.gesturemusic.app-debug-51 C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\debug\res
-com.yourname.gesturemusic.app-main-52 C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\res
+com.yourname.gesturemusic.app-pngs-46 D:\GitHub\gesture-music-wear\app\build\generated\res\pngs\debug
+com.yourname.gesturemusic.app-resValues-47 D:\GitHub\gesture-music-wear\app\build\generated\res\resValues\debug
+com.yourname.gesturemusic.app-packageDebugResources-48 D:\GitHub\gesture-music-wear\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.yourname.gesturemusic.app-packageDebugResources-49 D:\GitHub\gesture-music-wear\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.yourname.gesturemusic.app-debug-50 D:\GitHub\gesture-music-wear\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.yourname.gesturemusic.app-debug-51 D:\GitHub\gesture-music-wear\app\src\debug\res
+com.yourname.gesturemusic.app-main-52 D:\GitHub\gesture-music-wear\app\src\main\res

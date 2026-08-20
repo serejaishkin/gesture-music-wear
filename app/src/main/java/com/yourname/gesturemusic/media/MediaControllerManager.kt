@@ -42,34 +42,33 @@ class MediaControllerManager(private val context: Context) {
         lastPlaybackAt = 0L
     }
 
+    /**
+     * FIX: previously these three methods were gated behind canControlPlayback(),
+     * which required audioManager.isMusicActive == true OR playback within the
+     * last 30s. That meant the very first PLAY_PAUSE (starting playback from a
+     * paused/stopped state) was always silently dropped, because nothing had
+     * "recently played" yet — the gesture was recognized (vibration + broadcast
+     * fired from GestureMusicService) but no media key was ever dispatched.
+     * Media key events are safe to dispatch even with no active session; Android
+     * routes them to the appropriate session (or does nothing) on its own, so the
+     * gate was providing no real protection — only breaking legitimate use.
+     */
     fun playPause() {
-        if (!canControlPlayback()) {
-            Log.d(TAG, "Ignoring PLAY_PAUSE: no known local playback session")
-            return
-        }
         dispatchLocal(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
     }
 
     fun nextTrack() {
-        if (!canControlPlayback()) {
-            Log.d(TAG, "Ignoring NEXT: no known local playback session")
-            return
-        }
         dispatchLocal(KeyEvent.KEYCODE_MEDIA_NEXT)
     }
 
     fun previousTrack() {
-        if (!canControlPlayback()) {
-            Log.d(TAG, "Ignoring PREVIOUS: no known local playback session")
-            return
-        }
         dispatchLocal(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
     }
 
     fun isPlaying(): Boolean = audioManager.isMusicActive
     fun hasActiveSession(): Boolean = canControlPlayback()
 
-    /** Keeps a paused local player controllable for a short time without starting a new player. */
+    /** Kept for UI/state purposes (e.g. idle-timer decisions), no longer used to gate dispatch. */
     private fun canControlPlayback(): Boolean {
         val playing = audioManager.isMusicActive
         if (playing) {

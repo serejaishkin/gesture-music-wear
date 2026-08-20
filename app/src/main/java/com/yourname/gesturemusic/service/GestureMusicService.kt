@@ -199,9 +199,18 @@ class GestureMusicService : Service(), SensorEventListener {
         sendGestureBroadcast(gesture)
     }
 
+    // FIX (обучение не работает): раньше startTraining() только выставляла
+    // isTrainingMode=true и вызывала gestureTrainer.startRecording(), но НЕ
+    // регистрировала слушатели сенсоров. Если пользователь не нажимал "Старт"
+    // на ControlScreen (а обучение часто делают в первую очередь, до старта),
+    // sensorManager.registerListener никогда не вызывался — onSensorChanged()
+    // не срабатывал, addSample() не получал данных, прогресс висел на 0%.
+    // startGestureDetection() идемпотентна (return, если isRunning уже true),
+    // поэтому безопасно вызывать её здесь в любом случае.
     private fun startTraining(intent: Intent) {
         val name=intent.getStringExtra(EXTRA_TRAINING_GESTURE) ?: return
         trainingGestureType=try { GestureType.valueOf(name) } catch (_: IllegalArgumentException) { return }
+        if (!isRunning) startGestureDetection()
         isTrainingMode=true; lastTrainingProgress=0
         gestureTrainer.startRecording()
         sendTrainingProgress(0,gestureTrainer.getTrainingRepetitionCount(),false,false)

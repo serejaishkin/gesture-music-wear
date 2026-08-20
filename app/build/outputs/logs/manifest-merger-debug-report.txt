@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
-INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
-INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
-INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
+INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
+INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
+INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:1-54:12
 MERGED from [androidx.wear.compose:compose-material-core:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\27dab9a4416e30acb46dfe475d9fb2ec\transformed\compose-material-core-1.3.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.wear.compose:compose-ui-tooling:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\854127446df572f9f6ad1b4472b05173\transformed\compose-ui-tooling-1.3.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.wear.compose:compose-material:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\67ab93ed12eba9a01d614e6d0a48fb06\transformed\compose-material-1.3.1\AndroidManifest.xml:2:1-7:12
@@ -55,68 +55,68 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\sergejj\.gradle\ca
 MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\sergejj\.gradle\caches\transforms-4\3265fe80943bda6681104a8c25eaefae\transformed\tracing-1.0.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\sergejj\.gradle\caches\transforms-4\a406b6cfba48a7d9598cdd2f851229b2\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
 	package
-		INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+		INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
 	android:versionName
-		INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+		INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
 	android:versionCode
-		INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+		INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
 	xmlns:android
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:11-69
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:2:11-69
 uses-permission#android.permission.HIGH_SAMPLING_RATE_SENSORS
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:4:5-85
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:4:5-85
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:4:22-82
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:4:22-82
 uses-permission#android.permission.WAKE_LOCK
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:5-68
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:5-68
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:22-65
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:5:22-65
 uses-permission#android.permission.VIBRATE
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:5-66
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:5-66
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:22-63
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:6:22-63
 uses-permission#android.permission.FOREGROUND_SERVICE
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:5-77
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:5-77
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:22-74
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:7:22-74
 uses-permission#android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:8:5-92
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:8:5-92
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:8:22-89
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:8:22-89
 uses-permission#android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:9:5-95
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:9:5-95
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:9:22-92
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:9:22-92
 uses-permission#android.permission.MODIFY_AUDIO_SETTINGS
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:5-80
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:5-80
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:22-77
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:10:22-77
 uses-permission#android.permission.BLUETOOTH
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:13:5-68
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:13:5-68
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:13:22-65
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:13:22-65
 uses-permission#android.permission.BLUETOOTH_CONNECT
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:14:5-76
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:14:5-76
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:14:22-73
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:14:22-73
 uses-feature#android.hardware.type.watch
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:5-64
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:5-64
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:19-61
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:16:19-61
 uses-feature#android.hardware.sensor.accelerometer
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:5-98
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:5-98
 	android:required
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:72-95
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:72-95
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:19-71
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:17:19-71
 uses-feature#android.hardware.sensor.gyroscope
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:5-94
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:5-94
 	android:required
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:68-91
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:68-91
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:19-67
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:19-67
 application
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:20:5-53:19
-INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:20:5-53:19
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:20:5-53:19
+INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:20:5-53:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:23:5-33:19
@@ -134,69 +134,69 @@ MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\sergejj\.gradle\caches\transforms-4\babf8fc609219c7fd375db8506808354\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\sergejj\.gradle\caches\transforms-4\babf8fc609219c7fd375db8506808354\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
 	android:extractNativeLibs
-		INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+		INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\39d3b36b9270d00e0468995ae8a339c7\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:26:9-35
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:26:9-35
 	android:label
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:24:9-41
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:24:9-41
 	android:roundIcon
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:25:9-54
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:25:9-54
 	android:icon
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:23:9-43
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:23:9-43
 	android:allowBackup
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:22:9-35
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:22:9-35
 	android:theme
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:27:9-59
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:27:9-59
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:21:9-40
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:21:9-40
 uses-library#com.google.android.wearable
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:29:9-31:39
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:29:9-31:39
 	android:required
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:31:13-36
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:31:13-36
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:30:13-55
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:30:13-55
 meta-data#com.google.android.wearable.standalone
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:33:9-35:36
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:33:9-35:36
 	android:value
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:35:13-33
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:35:13-33
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:34:13-66
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:34:13-66
 activity#com.yourname.gesturemusic.MainActivity
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:37:9-46:20
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:37:9-46:20
 	android:launchMode
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:41:13-44
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:41:13-44
 	android:exported
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:39:13-36
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:39:13-36
 	android:theme
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:40:13-63
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:40:13-63
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:38:13-41
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:38:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:42:13-45:29
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:42:13-45:29
 action#android.intent.action.MAIN
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:17-69
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:17-69
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:25-66
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:43:25-66
 category#android.intent.category.LAUNCHER
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:44:17-77
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:44:17-77
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:44:27-74
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:44:27-74
 service#com.yourname.gesturemusic.service.GestureMusicService
-ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:48:9-52:38
+ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:48:9-52:38
 	android:enabled
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:52:13-35
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:52:13-35
 	android:exported
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:50:13-37
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:50:13-37
 	android:foregroundServiceType
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:51:13-58
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:51:13-58
 	android:name
-		ADDED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:49:13-56
+		ADDED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:49:13-56
 uses-sdk
-INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
-INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
-INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
 MERGED from [androidx.wear.compose:compose-material-core:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\27dab9a4416e30acb46dfe475d9fb2ec\transformed\compose-material-core-1.3.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.wear.compose:compose-material-core:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\27dab9a4416e30acb46dfe475d9fb2ec\transformed\compose-material-core-1.3.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.wear.compose:compose-ui-tooling:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\854127446df572f9f6ad1b4472b05173\transformed\compose-ui-tooling-1.3.1\AndroidManifest.xml:5:5-44
@@ -298,9 +298,9 @@ MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\sergejj\.gradle\caches\tra
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\sergejj\.gradle\caches\transforms-4\a406b6cfba48a7d9598cdd2f851229b2\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\sergejj\.gradle\caches\transforms-4\a406b6cfba48a7d9598cdd2f851229b2\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 	android:targetSdkVersion
-		INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+		INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from C:\Users\sergejj\Documents\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
+		INJECTED from D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml
 provider#androidx.startup.InitializationProvider
 ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:24:9-32:20
