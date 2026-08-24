@@ -54,7 +54,7 @@ fun TrainingScreen(onBack: () -> Unit) {
                     isTraining = false
                     message = if (success) "✓ Жест сохранён" else "✕ Повторения слишком разные"
                 } else if (repetitions > 0) {
-                    message = "Повтор $repetitions/$REQUIRED_REPETITIONS принят"
+                    message = "Повтор $repetitions/$REQUIRED_REPETITIONS принят — ждём следующий"
                     progress = 0
                 }
             }
@@ -78,22 +78,10 @@ fun TrainingScreen(onBack: () -> Unit) {
         }
         Text(message, style = MaterialTheme.typography.caption3, textAlign = TextAlign.Center)
 
-        TrainingButton(GestureType.ACTIVATE, selectedGesture == GestureType.ACTIVATE && isTraining) {
-            if (isTraining) stop(context) else start(context, GestureType.ACTIVATE)
-            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.ACTIVATE; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
-        }
-        TrainingButton(GestureType.NEXT_TRACK, selectedGesture == GestureType.NEXT_TRACK && isTraining) {
-            if (isTraining) stop(context) else start(context, GestureType.NEXT_TRACK)
-            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.NEXT_TRACK; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
-        }
-        TrainingButton(GestureType.PREVIOUS_TRACK, selectedGesture == GestureType.PREVIOUS_TRACK && isTraining) {
-            if (isTraining) stop(context) else start(context, GestureType.PREVIOUS_TRACK)
-            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.PREVIOUS_TRACK; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
-        }
-        TrainingButton(GestureType.PLAY_PAUSE, selectedGesture == GestureType.PLAY_PAUSE && isTraining) {
-            if (isTraining) stop(context) else start(context, GestureType.PLAY_PAUSE)
-            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.PLAY_PAUSE; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
-        }
+        TrainingButton(GestureType.ACTIVATE, selectedGesture == GestureType.ACTIVATE && isTraining) { toggleTraining(context, GestureType.ACTIVATE, isTraining).also { isTraining = it; if(it){selectedGesture=GestureType.ACTIVATE;repetitions=0;progress=0;message="Сделайте жест. Начало и конец определятся автоматически"}} }
+        TrainingButton(GestureType.NEXT_TRACK, selectedGesture == GestureType.NEXT_TRACK && isTraining) { toggleTraining(context, GestureType.NEXT_TRACK, isTraining).also { isTraining = it; if(it){selectedGesture=GestureType.NEXT_TRACK;repetitions=0;progress=0;message="Сделайте жест. Начало и конец определятся автоматически"}} }
+        TrainingButton(GestureType.PREVIOUS_TRACK, selectedGesture == GestureType.PREVIOUS_TRACK && isTraining) { toggleTraining(context, GestureType.PREVIOUS_TRACK, isTraining).also { isTraining = it; if(it){selectedGesture=GestureType.PREVIOUS_TRACK;repetitions=0;progress=0;message="Сделайте жест. Начало и конец определятся автоматически"}} }
+        TrainingButton(GestureType.PLAY_PAUSE, selectedGesture == GestureType.PLAY_PAUSE && isTraining) { toggleTraining(context, GestureType.PLAY_PAUSE, isTraining).also { isTraining = it; if(it){selectedGesture=GestureType.PLAY_PAUSE;repetitions=0;progress=0;message="Сделайте жест. Начало и конец определятся автоматически"}} }
 
         Spacer(Modifier.height(4.dp))
         Button(onClick = { context.startService(Intent(context,GestureMusicService::class.java).apply{action=GestureMusicService.ACTION_CLEAR_TRAINING}); repetitions=0; progress=0; isTraining=false; message="Шаблоны очищены" }, modifier=Modifier.fillMaxWidth(), colors=ButtonDefaults.secondaryButtonColors()) { Text("🗑 Очистить всё") }
@@ -104,8 +92,17 @@ fun TrainingScreen(onBack: () -> Unit) {
 @Composable
 private fun TrainingButton(gesture: GestureType, active: Boolean, onClick: () -> Unit) {
     Button(onClick=onClick, modifier=Modifier.fillMaxWidth(), colors=if(active) ButtonDefaults.primaryButtonColors() else ButtonDefaults.secondaryButtonColors()) {
-        Text(if(active) "⏹ ${gestureName(gesture)}" else "▶ ${gestureName(gesture)}")
+        Text(if(active) "⏺ ${gestureName(gesture)} — идёт обучение" else "▶ ${gestureName(gesture)}")
     }
+}
+
+private fun toggleTraining(context: Context, gesture: GestureType, active: Boolean): Boolean {
+    if (active) {
+        context.startService(Intent(context,GestureMusicService::class.java).apply { action=GestureMusicService.ACTION_STOP_TRAINING })
+        return false
+    }
+    context.startService(Intent(context,GestureMusicService::class.java).apply { action=GestureMusicService.ACTION_START_TRAINING; putExtra(GestureMusicService.EXTRA_TRAINING_GESTURE,gesture.name) })
+    return true
 }
 
 private fun gestureName(gesture: GestureType): String = when(gesture) {
@@ -113,12 +110,4 @@ private fun gestureName(gesture: GestureType): String = when(gesture) {
     GestureType.NEXT_TRACK -> "След. трек"
     GestureType.PREVIOUS_TRACK -> "Пред. трек"
     GestureType.PLAY_PAUSE -> "Play/Pause"
-}
-
-private fun start(context: Context, gesture: GestureType) {
-    context.startService(Intent(context,GestureMusicService::class.java).apply { action=GestureMusicService.ACTION_START_TRAINING; putExtra(GestureMusicService.EXTRA_TRAINING_GESTURE,gesture.name) })
-}
-
-private fun stop(context: Context) {
-    context.startService(Intent(context,GestureMusicService::class.java).apply { action=GestureMusicService.ACTION_STOP_TRAINING })
 }
