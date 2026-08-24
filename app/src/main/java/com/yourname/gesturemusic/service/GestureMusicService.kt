@@ -40,7 +40,6 @@ class GestureMusicService : Service(), SensorEventListener {
         private const val IDLE_TIMEOUT_MS = 30000L
         private const val GESTURE_COOLDOWN_MS = 1000L
         private const val SCREEN_OFF_BLOCK_MS = 800L
-        private const val TRAINING_REPETITIONS = 5
         const val ACTION_START = "com.yourname.gesturemusic.ACTION_START"
         const val ACTION_STOP = "com.yourname.gesturemusic.ACTION_STOP"
         const val ACTION_UPDATE_SENSITIVITY = "com.yourname.gesturemusic.ACTION_UPDATE_SENSITIVITY"
@@ -175,8 +174,7 @@ class GestureMusicService : Service(), SensorEventListener {
         armingManager.update(timestamp)
         val trainedGesture=gestureTrainer.recognize(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ)
         if (trainedGesture == GestureType.ACTIVATE) {
-            armingManager.activate(timestamp); lastGestureTime=timestamp; vibrateLong()
-            sendGestureBroadcast(GestureType.ACTIVATE); return
+            armingManager.activate(timestamp); lastGestureTime=timestamp; vibrateLong(); sendGestureBroadcast(GestureType.ACTIVATE); return
         }
         if (gestureTrainer.hasTrainedGesture(GestureType.ACTIVATE) && !armingManager.isArmed) return
         val gesture=trainedGesture ?: run {
@@ -199,41 +197,65 @@ class GestureMusicService : Service(), SensorEventListener {
         sendGestureBroadcast(gesture)
     }
 
-    // FIX (обучение не работает): раньше startTraining() только выставляла
-    // isTrainingMode=true и вызывала gestureTrainer.startRecording(), но НЕ
-    // регистрировала слушатели сенсоров. Если пользователь не нажимал "Старт"
-    // на ControlScreen (а обучение часто делают в первую очередь, до старта),
-    // sensorManager.registerListener никогда не вызывался — onSensorChanged()
-    // не срабатывал, addSample() не получал данных, прогресс висел на 0%.
-    // startGestureDetection() идемпотентна (return, если isRunning уже true),
-    // поэтому безопасно вызывать её здесь в любом случае.
+    /**
+     * Start one training repetition. This method explicitly ensures sensors are
+     * registered even when the service is already running but had entered its
+     * idle state and unregistered them.
+     */
     private fun startTraining(intent: Intent) {
         val name=intent.getStringExtra(EXTRA_TRAINING_GESTURE) ?: return
         trainingGestureType=try { GestureType.valueOf(name) } catch (_: IllegalArgumentException) { return }
         if (!isRunning) startGestureDetection()
-        isTrainingMode=true; lastTrainingProgress=0
+        ensureSensorsRegistered()
+        if (gestureTrainer.getTrainingRepetitionCount() == 0 && !gestureTrainer.isCurrentlyRecording()) {
+            gestureTrainer.startTraining()
+        }
         gestureTrainer.startRecording()
+        isTrainingMode=true
+        lastTrainingProgress=0
         sendTrainingProgress(0,gestureTrainer.getTrainingRepetitionCount(),false,false)
         vibrate()
     }
 
+    /** Finish exactly one repetition. Five accepted repetitions are then saved. */
     private fun stopTraining() {
         if (!isTrainingMode) return
         val type=trainingGestureType ?: return
-        val acceptedBefore=gestureTrainer.getTrainingRepetitionCount()
-        val success=gestureTrainer.stopRecording(type)
+        isTrainingMode=false
+        val accepted=gestureTrainer.finishRepetition()
         val repetitions=gestureTrainer.getTrainingRepetitionCount()
-        if (success) {
-            isTrainingMode=false; trainingGestureType=null; sendTrainingProgress(100,TRAINING_REPETITIONS,true,true); vibrateLong()
+        if (!accepted) {
+            sendTrainingProgress(0,repetitions,false,false)
+            Log.w(TAG,"Training repetition rejected: not enough motion")
+            vibrate()
+            return
+        }
+        if (repetitions >= gestureTrainer.getRequiredRepetitions()) {
+            val success=gestureTrainer.saveTraining(type)
+            sendTrainingProgress(100,repetitions,true,success)
+            if (success) vibrateLong()
+            else vibrate()
+            trainingGestureType=null
         } else {
-            // stopRecording keeps accepted repetitions internally; allow another recording when fewer than five.
-            isTrainingMode=false
             sendTrainingProgress(100,repetitions,false,false)
-            Log.d(TAG,"Training repetition finished: before=$acceptedBefore after=$repetitions")
+            Log.d(TAG,"Training repetition accepted: $repetitions/5")
+            vibrate()
         }
     }
 
-    private fun clearTraining() { gestureTrainer.clearAll(); armingManager.deactivate(); sendTrainingProgress(0,0,true,true) }
+    private fun clearTraining() {
+        gestureTrainer.clearAll()
+        armingManager.deactivate()
+        trainingGestureType=null
+        isTrainingMode=false
+        sendTrainingProgress(0,0,true,true)
+    }
+
+    private fun ensureSensorsRegistered() {
+        gyroscope?.let { sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME) }
+        linearAccel?.let { sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME) }
+        if (!wakeLock.isHeld) wakeLock.acquire(10*60*1000L)
+    }
 
     private fun sendTrainingProgress(progress:Int,repetitions:Int,done:Boolean,success:Boolean) {
         sendBroadcast(Intent(ACTION_TRAINING_PROGRESS).apply {
@@ -250,9 +272,7 @@ class GestureMusicService : Service(), SensorEventListener {
         if (isRunning) return
         isRunning=true; lastGestureTime=0L; screenOffTime=-1L
         try { mediaControllerManager.connect() } catch(e:Exception) { Log.e(TAG,"MediaController connect failed",e) }
-        gyroscope?.let { sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME) }
-        linearAccel?.let { sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME) }
-        if (!wakeLock.isHeld) wakeLock.acquire(10*60*1000L)
+        ensureSensorsRegistered()
         startForeground(NOTIFICATION_ID,buildNotification())
     }
 
@@ -276,15 +296,13 @@ class GestureMusicService : Service(), SensorEventListener {
 
     private fun startIdleTimer() {
         cancelIdleTimer(); idleExecutor=idleExecutor ?: Executors.newSingleThreadScheduledExecutor()
-        idleTask=idleExecutor?.schedule({ runOnUiThread { if (!isMusicPlaying) { sensorManager.unregisterListener(this@GestureMusicService); if(wakeLock.isHeld) wakeLock.release() } } },IDLE_TIMEOUT_MS,TimeUnit.MILLISECONDS)
+        idleTask=idleExecutor?.schedule({ if (!isMusicPlaying && !isTrainingMode) { sensorManager.unregisterListener(this@GestureMusicService); if(wakeLock.isHeld) wakeLock.release() } },IDLE_TIMEOUT_MS,TimeUnit.MILLISECONDS)
     }
 
     private fun cancelIdleTimer() {
         idleTask?.cancel(false); idleTask=null
         if (!isRunning) return
-        gyroscope?.let { sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME) }
-        linearAccel?.let { sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME) }
-        if (!wakeLock.isHeld) wakeLock.acquire(10*60*1000L)
+        ensureSensorsRegistered()
     }
 
     private fun createNotificationChannel() {
@@ -298,8 +316,11 @@ class GestureMusicService : Service(), SensorEventListener {
         return NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle("Gesture Music").setContentText(text).setSmallIcon(R.drawable.ic_music_note).setContentIntent(contentIntent).addAction(R.drawable.ic_stop,"Стоп",stopIntent).setOngoing(true).setPriority(NotificationCompat.PRIORITY_LOW).build()
     }
 
-    private fun vibrate(){try{vibrator.vibrate(VibrationEffect.createOneShot(50L,VibrationEffect.DEFAULT_AMPLITUDE))}catch(_:Exception){}}
-    private fun vibrateShort(){try{vibrator.vibrate(VibrationEffect.createOneShot(20L,VibrationEffect.DEFAULT_AMPLITUDE))}catch(_:Exception){}}
-    private fun vibrateLong(){try{vibrator.vibrate(VibrationEffect.createOneShot(200L,VibrationEffect.DEFAULT_AMPLITUDE))}catch(_:Exception){}}
-    private fun runOnUiThread(action:()->Unit){android.os.Handler(android.os.Looper.getMainLooper()).post(action)}
+    private fun vibrate() {
+        try { vibrator.vibrate(VibrationEffect.createOneShot(45,VibrationEffect.DEFAULT_AMPLITUDE)) } catch (_: Exception) {}
+    }
+
+    private fun vibrateLong() {
+        try { vibrator.vibrate(VibrationEffect.createOneShot(120,VibrationEffect.DEFAULT_AMPLITUDE)) } catch (_: Exception) {}
+    }
 }
