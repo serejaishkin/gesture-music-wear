@@ -40,6 +40,8 @@ class GestureMusicService : Service(), SensorEventListener {
         const val ACTION_UPDATE_SENSITIVITY="com.yourname.gesturemusic.ACTION_UPDATE_SENSITIVITY"; const val ACTION_START_TRAINING="com.yourname.gesturemusic.ACTION_START_TRAINING"
         const val ACTION_STOP_TRAINING="com.yourname.gesturemusic.ACTION_STOP_TRAINING"; const val ACTION_CLEAR_TRAINING="com.yourname.gesturemusic.ACTION_CLEAR_TRAINING"
         const val EXTRA_ANGLE_THRESHOLD="angle_threshold"; const val EXTRA_PINCH_THRESHOLD="pinch_threshold"; const val EXTRA_COOLDOWN="gesture_cooldown"; const val EXTRA_LEFT_HAND="left_hand"; const val EXTRA_TRAINING_GESTURE="training_gesture"
+        // NEW: min/max duration constants
+        const val EXTRA_MIN_DURATION="min_duration"; const val EXTRA_MAX_DURATION="max_duration"
         const val ACTION_TRAINING_PROGRESS="com.yourname.gesturemusic.TRAINING_PROGRESS"; const val EXTRA_TRAINING_PROGRESS="training_progress"; const val EXTRA_TRAINING_REPETITIONS="training_repetitions"; const val EXTRA_TRAINING_DONE="training_done"; const val EXTRA_TRAINING_SUCCESS="training_success"
     }
     private lateinit var sensorManager:SensorManager; private var gyroscope:Sensor?=null; private var linearAccel:Sensor?=null; private lateinit var mediaControllerManager:MediaControllerManager
@@ -59,7 +61,23 @@ class GestureMusicService : Service(), SensorEventListener {
     override fun onSensorChanged(event:SensorEvent?){event?:return;val timestamp=System.currentTimeMillis();when(event.sensor.type){Sensor.TYPE_GYROSCOPE->{lastGyroX=event.values[0];lastGyroY=event.values[1];lastGyroZ=event.values[2]};Sensor.TYPE_LINEAR_ACCELERATION->{lastLinAccX=event.values[0];lastLinAccY=event.values[1];lastLinAccZ=event.values[2];if(isTrainingMode){val e=gestureTrainer.addSample(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=gestureTrainer.getRecordingProgress();if(p!=lastTrainingProgress){lastTrainingProgress=p;sendTrainingProgress(p,gestureTrainer.getTrainingRepetitionCount(),false,false)};if(e==GestureTrainer.TrainingEvent.REPETITION_ACCEPTED)onTrainingRepetitionAccepted()}else processGestures(timestamp)}}}
     override fun onAccuracyChanged(sensor:Sensor?,accuracy:Int){}
 
-    private fun processGestures(timestamp:Long){if(screenOffTime>0&&timestamp-screenOffTime<SCREEN_OFF_BLOCK_MS)return;if(timestamp-lastGestureTime<GESTURE_COOLDOWN_MS)return;armingManager.update(timestamp);val learned=gestureTrainer.recognize(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);if(learned==GestureType.ACTIVATE){armingManager.activate(timestamp);lastGestureTime=timestamp;vibrateLong();sendGestureBroadcast(learned);return};if(gestureTrainer.hasTrainedGesture(GestureType.ACTIVATE)&&!armingManager.isArmed)return;val gesture=learned?:run{val w=wristDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=pinchDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);w?:p};gesture?.let{armingManager.touch(timestamp);executeGesture(it,timestamp)}}
+    // FIX: block only learned gestures when not armed, classic detectors always work
+    private fun processGestures(timestamp:Long){
+        if(screenOffTime>0&&timestamp-screenOffTime<SCREEN_OFF_BLOCK_MS)return
+        if(timestamp-lastGestureTime<GESTURE_COOLDOWN_MS)return
+        armingManager.update(timestamp)
+        val learned=gestureTrainer.recognize(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ)
+        if(learned==GestureType.ACTIVATE){
+            armingManager.activate(timestamp)
+            lastGestureTime=timestamp
+            vibrateLong()
+            sendGestureBroadcast(learned)
+            return
+        }
+        val effectiveLearned=if(gestureTrainer.hasTrainedGesture(GestureType.ACTIVATE)&&!armingManager.isArmed)null else learned
+        val gesture=effectiveLearned?:run{val w=wristDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=pinchDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);w?:p}
+        gesture?.let{armingManager.touch(timestamp);executeGesture(it,timestamp)}
+    }
     private fun executeGesture(gesture:GestureType,timestamp:Long=System.currentTimeMillis()){if(gesture==GestureType.ACTIVATE){armingManager.activate(timestamp);lastGestureTime=timestamp;vibrateLong();sendGestureBroadcast(gesture);return};lastGestureTime=timestamp;vibrate();when(gesture){GestureType.NEXT_TRACK->mediaControllerManager.nextTrack();GestureType.PREVIOUS_TRACK->mediaControllerManager.previousTrack();GestureType.PLAY_PAUSE->mediaControllerManager.playPause();GestureType.ACTIVATE->Unit};sendGestureBroadcast(gesture)}
 
     private fun startTraining(intent:Intent){val name=intent.getStringExtra(EXTRA_TRAINING_GESTURE)?:return;trainingGestureType=try{GestureType.valueOf(name)}catch(_:IllegalArgumentException){return};if(!isRunning)startGestureDetection();ensureSensorsRegistered();gestureTrainer.startTraining();isTrainingMode=true;lastTrainingProgress=0;sendTrainingProgress(0,0,false,false);vibrate()}
@@ -72,7 +90,17 @@ class GestureMusicService : Service(), SensorEventListener {
 
     private fun startGestureDetection(){if(isRunning)return;isRunning=true;lastGestureTime=0L;screenOffTime=-1L;try{mediaControllerManager.connect()}catch(e:Exception){Log.e(TAG,"MediaController connect failed",e)};ensureSensorsRegistered();startForeground(NOTIFICATION_ID,buildNotification())}
     private fun stopGestureDetection(){if(!isRunning)return;isRunning=false;sensorManager.unregisterListener(this);if(wakeLock.isHeld)wakeLock.release();wristDetector.reset();pinchDetector.reset();armingManager.deactivate();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
-    private fun updateSensitivity(intent:Intent){val angle=intent.getFloatExtra(EXTRA_ANGLE_THRESHOLD,28f);val pinch=intent.getFloatExtra(EXTRA_PINCH_THRESHOLD,3f);val cooldown=intent.getLongExtra(EXTRA_COOLDOWN,1200L);val left=intent.getBooleanExtra(EXTRA_LEFT_HAND,false);wristDetector=WristRotationDetector(angleThresholdDegrees=angle,cooldownMs=cooldown,leftHand=left);pinchDetector=DoublePinchDetector(thresholdUp=pinch)}
+    // FIX: pass minDuration/maxDuration to WristRotationDetector, thresholdDown and cooldown to DoublePinchDetector
+    private fun updateSensitivity(intent:Intent){
+        val angle=intent.getFloatExtra(EXTRA_ANGLE_THRESHOLD,28f)
+        val pinch=intent.getFloatExtra(EXTRA_PINCH_THRESHOLD,3f)
+        val cooldown=intent.getLongExtra(EXTRA_COOLDOWN,1200L)
+        val left=intent.getBooleanExtra(EXTRA_LEFT_HAND,false)
+        val minDur=intent.getLongExtra(EXTRA_MIN_DURATION,160L)
+        val maxDur=intent.getLongExtra(EXTRA_MAX_DURATION,600L)
+        wristDetector=WristRotationDetector(angleThresholdDegrees=angle,cooldownMs=cooldown,leftHand=left,minDurationMs=minDur,maxDurationMs=maxDur)
+        pinchDetector=DoublePinchDetector(thresholdUp=pinch,thresholdDown=-(pinch*0.8f),cooldownMs=cooldown)
+    }
     private fun startIdleTimer(){cancelIdleTimer();idleExecutor=idleExecutor?:Executors.newSingleThreadScheduledExecutor();idleTask=idleExecutor?.schedule({if(!isMusicPlaying&&!isTrainingMode){sensorManager.unregisterListener(this@GestureMusicService);if(wakeLock.isHeld)wakeLock.release()}},IDLE_TIMEOUT_MS,TimeUnit.MILLISECONDS)}
     private fun cancelIdleTimer(){idleTask?.cancel(false);idleTask=null;if(isRunning)ensureSensorsRegistered()}
     private fun createNotificationChannel(){notificationManager.createNotificationChannel(NotificationChannel(CHANNEL_ID,"Gesture Music Control",NotificationManager.IMPORTANCE_LOW).apply{description="Фоновое управление музыкой жестами";setShowBadge(false)})}

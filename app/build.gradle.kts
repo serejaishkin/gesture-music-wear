@@ -62,7 +62,7 @@ dependencies {
     implementation(libs.androidx.media)
 
     implementation("androidx.wear.compose:compose-ui-tooling:1.3.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

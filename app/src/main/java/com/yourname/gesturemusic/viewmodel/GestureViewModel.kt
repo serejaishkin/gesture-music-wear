@@ -10,6 +10,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourname.gesturemusic.gesture.GestureType
 import com.yourname.gesturemusic.service.GestureMusicService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -46,6 +47,19 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
     private val _saveMessage = mutableStateOf("")
     val saveMessage: State<String> = _saveMessage
 
+    // Training state
+    private val _trainingProgress = mutableStateOf(0)
+    val trainingProgress: State<Int> = _trainingProgress
+
+    private val _trainingRepetitions = mutableStateOf(0)
+    val trainingRepetitions: State<Int> = _trainingRepetitions
+
+    private val _trainingDone = mutableStateOf(false)
+    val trainingDone: State<Boolean> = _trainingDone
+
+    private val _trainingSuccess = mutableStateOf(false)
+    val trainingSuccess: State<Boolean> = _trainingSuccess
+
     private val gestureReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -61,6 +75,12 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
                         }
                     }
                 }
+                GestureMusicService.ACTION_TRAINING_PROGRESS -> {
+                    _trainingProgress.value = intent.getIntExtra(GestureMusicService.EXTRA_TRAINING_PROGRESS, 0)
+                    _trainingRepetitions.value = intent.getIntExtra(GestureMusicService.EXTRA_TRAINING_REPETITIONS, 0)
+                    _trainingDone.value = intent.getBooleanExtra(GestureMusicService.EXTRA_TRAINING_DONE, false)
+                    _trainingSuccess.value = intent.getBooleanExtra(GestureMusicService.EXTRA_TRAINING_SUCCESS, false)
+                }
             }
         }
     }
@@ -68,6 +88,7 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
     init {
         val filter = IntentFilter().apply {
             addAction("com.yourname.gesturemusic.GESTURE_DETECTED")
+            addAction(GestureMusicService.ACTION_TRAINING_PROGRESS)
         }
         context.registerReceiver(gestureReceiver, filter, Context.RECEIVER_EXPORTED)
         sendSensitivityUpdate()
@@ -145,6 +166,39 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
         _leftHand.value = false
         saveSettings()
         sendSensitivityUpdate()
+    }
+
+    // --- Training ---
+
+    fun startTraining(gestureType: GestureType) {
+        resetTrainingUi()
+        val intent = Intent(context, GestureMusicService::class.java).apply {
+            action = GestureMusicService.ACTION_START_TRAINING
+            putExtra(GestureMusicService.EXTRA_TRAINING_GESTURE, gestureType.name)
+        }
+        context.startService(intent)
+    }
+
+    fun stopTraining() {
+        val intent = Intent(context, GestureMusicService::class.java).apply {
+            action = GestureMusicService.ACTION_STOP_TRAINING
+        }
+        context.startService(intent)
+    }
+
+    fun clearTraining() {
+        val intent = Intent(context, GestureMusicService::class.java).apply {
+            action = GestureMusicService.ACTION_CLEAR_TRAINING
+        }
+        context.startService(intent)
+        resetTrainingUi()
+    }
+
+    private fun resetTrainingUi() {
+        _trainingProgress.value = 0
+        _trainingRepetitions.value = 0
+        _trainingDone.value = false
+        _trainingSuccess.value = false
     }
 
     private fun sendSensitivityUpdate() {
