@@ -19,7 +19,7 @@ class WristRotationDetector(
     private val windowMs: Long = 400L,
     private val idleThreshold: Float = 0.35f,
     private val idleTimeoutMs: Long = 180L,
-    private val antiNoiseAccY: Float = 15f,
+    private val antiNoiseAccY: Float = 20f,
     private val leftHand: Boolean = false
 ) : GestureDetector {
 
@@ -41,8 +41,19 @@ class WristRotationDetector(
         gyroX: Float, gyroY: Float, gyroZ: Float,
         linAccX: Float, linAccY: Float, linAccZ: Float
     ): GestureType? {
+        // FIX (маhание рукой = 0 реакции): раньше ЛЮБОЙ единичный сэмпл с
+        // |linAccY| > antiNoiseAccY полностью сбрасывал накопленное окно
+        // поворота. Быстрый, резкий (то есть настоящий, уверенный) поворот
+        // запястья сам по себе двигает всю кисть и легко даёт такой всплеск —
+        // и обнулял сам себя посреди жеста, до того как угол успевал набраться.
+        // Теперь сброс происходит только если всплеск НЕ сопровождается
+        // реальной угловой скоростью (то есть это действительно похоже на
+        // удар/шум, а не на часть самого поворота) — иначе просто не
+        // учитываем этот один сэмпл и не портим уже накопленные данные.
         if (abs(linAccY) > antiNoiseAccY) {
-            resetWindow()
+            if (abs(gyroX) < idleThreshold * 2f) {
+                resetWindow()
+            }
             return null
         }
 

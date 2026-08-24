@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -33,7 +34,6 @@ android {
         jvmTarget = "11"
     }
 
-    // Kotlin 1.9.24 is paired with Compose Compiler 1.5.14.
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }

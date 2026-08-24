@@ -2,6 +2,7 @@ package com.yourname.gesturemusic.gesture
 
 import android.util.Log
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Double pinch detector for play/pause.
@@ -9,7 +10,7 @@ import kotlin.math.abs
  * Uses an explicit armed/disarmed state so the same physical pinch
  * cannot generate multiple PLAY_PAUSE events from sensor jitter.
  *
- * FIX (phantom triggers): the previous version reacted to *any* sharp
+ * FIX (phantom triggers, round 1): the previous version reacted to *any* sharp
  * Z-axis acceleration spike (threshold 3.0) with no check on the gyroscope.
  * A wrist twist, raising the arm to look at the watch, or an arm swing while
  * walking produces the exact same up/down Z-acceleration pattern, so it was
@@ -17,10 +18,26 @@ import kotlin.math.abs
  * with a gyroscope-exclusion idea — this merges that idea into the more robust
  * double-pinch state machine below: while the wrist is rotating (gyro magnitude
  * above maxGyroMagnitude) we no longer accumulate pinch state at all.
+ *
+ * FIX (phantom triggers, round 2): clenching a fist doesn't rotate the wrist
+ * (gyro stays quiet) but still produces a Z-axis jolt as the whole hand tenses,
+ * so it slipped past the gyro check above and was read as a pinch. A real
+ * thumb-to-index pinch is a small, isolated motion; a fist clench is a bigger,
+ * whole-hand motion. Two extra gates approximate that difference:
+ *  - maxAccZ: reject spikes that are too big to be a subtle finger pinch.
+ *  - maxXYAccel: reject spikes accompanied by real X/Y movement (the whole
+ *    hand/wrist shifting), which a fist clench tends to cause but an isolated
+ *    finger pinch mostly doesn't.
+ * This is still IMU-only heuristics and can't be perfect — if false triggers
+ * persist, training a custom PLAY_PAUSE gesture (which matches your exact
+ * motion via DTW) is the more reliable fix; see GestureMusicService, which now
+ * skips this heuristic entirely once PLAY_PAUSE has a trained template.
  */
 class DoublePinchDetector(
     private val thresholdUp: Float = 3.5f,
     private val thresholdDown: Float = -2.5f,
+    private val maxAccZ: Float = 7.0f,
+    private val maxXYAccel: Float = 2.5f,
     private val windowMs: Long = 800L,
     private val cooldownMs: Long = 1200L,
     private val maxGyroMagnitude: Float = 2.0f
@@ -84,10 +101,13 @@ class DoublePinchDetector(
 
         when (state) {
             PinchState.IDLE -> {
-                if (linAccZ > thresholdUp) {
+                val xyMag = sqrt(linAccX * linAccX + linAccY * linAccY)
+                if (linAccZ > thresholdUp && linAccZ <= maxAccZ && xyMag <= maxXYAccel) {
                     state = PinchState.UP_DETECTED
                     upTime = timestamp
-                    Log.d(TAG, "Pinch UP detected: z=${"%.1f".format(linAccZ)}")
+                    Log.d(TAG, "Pinch UP detected: z=${"%.1f".format(linAccZ)}, xy=${"%.1f".format(xyMag)}")
+                } else if (linAccZ > maxAccZ) {
+                    Log.d(TAG, "Rejected spike (too big, likely fist clench): z=${"%.1f".format(linAccZ)}")
                 }
             }
 
