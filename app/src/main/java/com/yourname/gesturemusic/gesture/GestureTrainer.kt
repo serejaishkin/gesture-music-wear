@@ -6,10 +6,15 @@ import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** Five-repetition gesture training with DTW validation. */
+/**
+ * Five-repetition gesture training with DTW validation.
+ *
+ * A training session consists of five independently recorded repetitions.
+ * startTraining() starts a new session; startRecording() starts only the next
+ * repetition and deliberately does NOT erase repetitions already accepted.
+ */
 class GestureTrainer(context: Context) {
     companion object {
         private const val TAG = "GestureTrainer"
@@ -36,15 +41,17 @@ class GestureTrainer(context: Context) {
     init { loadGestures() }
 
     fun startTraining() {
-        isRecording = true
-        currentRecording.clear()
         repetitions.clear()
-        Log.d(TAG, "5-repetition training started")
+        currentRecording.clear()
+        isRecording = true
+        Log.d(TAG, "New 5-repetition training session")
     }
 
+    /** Starts recording one repetition without clearing previous accepted repetitions. */
     fun startRecording() {
-        if (!isRecording) isRecording = true
+        isRecording = true
         currentRecording.clear()
+        Log.d(TAG, "Recording repetition ${repetitions.size + 1}/$TRAINING_REPETITIONS")
     }
 
     fun addSample(gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float) {
@@ -52,30 +59,33 @@ class GestureTrainer(context: Context) {
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
     }
 
-    /** Finishes the current repetition. Returns true when it was accepted. */
+    /** Finishes the current repetition and returns whether it contains enough motion. */
     fun finishRepetition(): Boolean {
         if (!isRecording) return false
+        isRecording = false
         val sample = currentRecording.toList()
         currentRecording.clear()
-        if (sample.size < MIN_SAMPLES || motionEnergy(sample) < MIN_MOTION_ENERGY) return false
+        if (sample.size < MIN_SAMPLES || motionEnergy(sample) < MIN_MOTION_ENERGY) {
+            Log.w(TAG, "Rejected repetition: samples=${sample.size}, energy=${motionEnergy(sample)}")
+            return false
+        }
         repetitions += normalize(sample)
-        if (repetitions.size >= TRAINING_REPETITIONS) isRecording = false
+        Log.d(TAG, "Accepted repetition ${repetitions.size}/$TRAINING_REPETITIONS")
         return true
     }
 
-    /** Compatibility: finishes the current repetition and saves after 5 accepted repetitions. */
-    fun stopRecording(gestureType: GestureType): Boolean {
-        if (currentRecording.size >= MIN_SAMPLES) finishRepetition() else currentRecording.clear()
-        isRecording = false
-        if (repetitions.size < TRAINING_REPETITIONS) {
-            Log.w(TAG, "Training incomplete: ${repetitions.size}/$TRAINING_REPETITIONS")
+    /** Saves the five accepted repetitions after DTW consistency validation. */
+    fun saveTraining(gestureType: GestureType): Boolean {
+        if (repetitions.size < TRAINING_REPETITIONS) return false
+        val template = chooseTemplate() ?: run {
+            Log.w(TAG, "Training rejected: repetitions are too different")
             return false
         }
-        val template = chooseTemplate() ?: run { repetitions.clear(); return false }
         trainedGestures[gestureType] = TrainedGesture(gestureType.name, template)
         saveGestures()
         repetitions.clear()
         currentRecording.clear()
+        isRecording = false
         Log.d(TAG, "Saved validated 5-repetition template: $gestureType")
         return true
     }
@@ -111,7 +121,7 @@ class GestureTrainer(context: Context) {
     }
 
     fun clearAll() {
-        trainedGestures.clear(); currentRecording.clear(); repetitions.clear()
+        trainedGestures.clear(); currentRecording.clear(); repetitions.clear(); isRecording = false
         prefs.edit().remove(KEY_GESTURES).apply()
     }
 
