@@ -65,6 +65,7 @@ class GestureMusicService : Service(), SensorEventListener {
         if(timestamp-lastGestureTime<GESTURE_COOLDOWN_MS)return
         armingManager.update(timestamp)
         val learned=gestureTrainer.recognize(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ)
+        Log.d(TAG, "processGestures: learned=$learned, armed=${armingManager.isArmed}")
         if(learned==GestureType.ACTIVATE){
             armingManager.activate(timestamp)
             lastGestureTime=timestamp
@@ -73,10 +74,29 @@ class GestureMusicService : Service(), SensorEventListener {
             return
         }
         val effectiveLearned=if(gestureTrainer.hasTrainedGesture(GestureType.ACTIVATE)&&!armingManager.isArmed)null else learned
-        val gesture=effectiveLearned?:run{val w=wristDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=pinchDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);w?:p}
+        val gesture=effectiveLearned?:run{val w=wristDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=pinchDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);Log.d(TAG,"Classic detectors: wrist=$w pinch=$p");w?:p}
+        Log.d(TAG, "Final gesture: $gesture")
         gesture?.let{armingManager.touch(timestamp);executeGesture(it,timestamp)}
     }
-    private fun executeGesture(gesture:GestureType,timestamp:Long=System.currentTimeMillis()){if(gesture==GestureType.ACTIVATE){armingManager.activate(timestamp);lastGestureTime=timestamp;vibrateLong();sendGestureBroadcast(gesture);return};lastGestureTime=timestamp;vibrate();when(gesture){GestureType.NEXT_TRACK->mediaControllerManager.nextTrack();GestureType.PREVIOUS_TRACK->mediaControllerManager.previousTrack();GestureType.PLAY_PAUSE->mediaControllerManager.playPause();GestureType.ACTIVATE->Unit};sendGestureBroadcast(gesture)}
+    private fun executeGesture(gesture:GestureType,timestamp:Long=System.currentTimeMillis()){
+        Log.d(TAG, "executeGesture: $gesture")
+        if(gesture==GestureType.ACTIVATE){
+            armingManager.activate(timestamp)
+            lastGestureTime=timestamp
+            vibrateLong()
+            sendGestureBroadcast(gesture)
+            return
+        }
+        lastGestureTime=timestamp
+        vibrate()
+        when(gesture){
+            GestureType.NEXT_TRACK->mediaControllerManager.nextTrack()
+            GestureType.PREVIOUS_TRACK->mediaControllerManager.previousTrack()
+            GestureType.PLAY_PAUSE->mediaControllerManager.playPause()
+            GestureType.ACTIVATE->Unit
+        }
+        sendGestureBroadcast(gesture)
+    }
 
     private fun startTraining(intent:Intent){val name=intent.getStringExtra(EXTRA_TRAINING_GESTURE)?:return;trainingGestureType=try{GestureType.valueOf(name)}catch(_:IllegalArgumentException){return};if(!isRunning)startGestureDetection();ensureSensorsRegistered();gestureTrainer.startTraining();isTrainingMode=true;lastTrainingProgress=0;sendTrainingProgress(0,0,false,false);vibrate()}
     private fun onTrainingRepetitionAccepted(){val count=gestureTrainer.getTrainingRepetitionCount();sendTrainingProgress(100,count,false,false);vibrate();if(count>=gestureTrainer.getRequiredRepetitions()){val type=trainingGestureType?:return;val success=gestureTrainer.saveTraining(type);isTrainingMode=false;trainingGestureType=null;sendTrainingProgress(100,count,true,success);if(success)vibrateLong()}}

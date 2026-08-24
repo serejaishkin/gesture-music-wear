@@ -1,6 +1,7 @@
 package com.yourname.gesturemusic.media
 
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
@@ -42,33 +43,13 @@ class MediaControllerManager(private val context: Context) {
         lastPlaybackAt = 0L
     }
 
-    /**
-     * FIX: previously these three methods were gated behind canControlPlayback(),
-     * which required audioManager.isMusicActive == true OR playback within the
-     * last 30s. That meant the very first PLAY_PAUSE (starting playback from a
-     * paused/stopped state) was always silently dropped, because nothing had
-     * "recently played" yet — the gesture was recognized (vibration + broadcast
-     * fired from GestureMusicService) but no media key was ever dispatched.
-     * Media key events are safe to dispatch even with no active session; Android
-     * routes them to the appropriate session (or does nothing) on its own, so the
-     * gate was providing no real protection — only breaking legitimate use.
-     */
-    fun playPause() {
-        dispatchLocal(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
-    }
-
-    fun nextTrack() {
-        dispatchLocal(KeyEvent.KEYCODE_MEDIA_NEXT)
-    }
-
-    fun previousTrack() {
-        dispatchLocal(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
-    }
+    fun playPause() { dispatchLocal(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+    fun nextTrack() { dispatchLocal(KeyEvent.KEYCODE_MEDIA_NEXT) }
+    fun previousTrack() { dispatchLocal(KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
 
     fun isPlaying(): Boolean = audioManager.isMusicActive
     fun hasActiveSession(): Boolean = canControlPlayback()
 
-    /** Kept for UI/state purposes (e.g. idle-timer decisions), no longer used to gate dispatch. */
     private fun canControlPlayback(): Boolean {
         val playing = audioManager.isMusicActive
         if (playing) {
@@ -84,11 +65,24 @@ class MediaControllerManager(private val context: Context) {
         try {
             val downEvent = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0)
             val upEvent = KeyEvent(downTime, downTime + 50, KeyEvent.ACTION_UP, keyCode, 0)
+
+            // Method 1: AudioManager (local sessions)
             audioManager.dispatchMediaKeyEvent(downEvent)
             handler.postDelayed({ audioManager.dispatchMediaKeyEvent(upEvent) }, 50)
-            Log.d(TAG, "Local media key sent: keyCode=$keyCode")
+
+            // Method 2: Media button broadcast (remote/Bluetooth sessions on Wear OS)
+            val intentDown = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                putExtra(Intent.EXTRA_KEY_EVENT, downEvent)
+            }
+            val intentUp = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                putExtra(Intent.EXTRA_KEY_EVENT, upEvent)
+            }
+            appContext.sendOrderedBroadcast(intentDown, null)
+            handler.postDelayed({ appContext.sendOrderedBroadcast(intentUp, null) }, 50)
+
+            Log.d(TAG, "Media key sent: keyCode=$keyCode")
         } catch (e: Exception) {
-            Log.w(TAG, "Local media control failed: ${e.message}")
+            Log.w(TAG, "Media control failed: ${e.message}")
         }
     }
 
