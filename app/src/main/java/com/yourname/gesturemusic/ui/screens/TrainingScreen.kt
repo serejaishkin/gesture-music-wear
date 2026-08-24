@@ -36,11 +36,11 @@ private const val REQUIRED_REPETITIONS = 5
 @Composable
 fun TrainingScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var isRecording by remember { mutableStateOf(false) }
-    var recordingGesture by remember { mutableStateOf<GestureType?>(null) }
+    var isTraining by remember { mutableStateOf(false) }
+    var selectedGesture by remember { mutableStateOf<GestureType?>(null) }
     var progress by remember { mutableStateOf(0) }
     var repetitions by remember { mutableStateOf(0) }
-    var message by remember { mutableStateOf("Выберите жест. Нужно 5 одинаковых повторений.") }
+    var message by remember { mutableStateOf("Выберите жест и начните обучение") }
 
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
@@ -51,11 +51,10 @@ fun TrainingScreen(onBack: () -> Unit) {
                 val done = intent.getBooleanExtra(GestureMusicService.EXTRA_TRAINING_DONE, false)
                 val success = intent.getBooleanExtra(GestureMusicService.EXTRA_TRAINING_SUCCESS, false)
                 if (done) {
-                    isRecording = false
-                    message = if (success) "✓ Жест сохранён" else "✕ Обучение отклонено"
+                    isTraining = false
+                    message = if (success) "✓ Жест сохранён" else "✕ Повторения слишком разные"
                 } else if (repetitions > 0) {
-                    message = "Повтор $repetitions/$REQUIRED_REPETITIONS принят. Сделайте следующий."
-                    isRecording = false
+                    message = "Повтор $repetitions/$REQUIRED_REPETITIONS принят"
                     progress = 0
                 }
             }
@@ -71,37 +70,41 @@ fun TrainingScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text("🎓 Обучение", style = MaterialTheme.typography.title3, textAlign = TextAlign.Center)
-        Text("5 повторений одного жеста", style = MaterialTheme.typography.body2, textAlign = TextAlign.Center)
+        Text("Сделайте один и тот же жест 5 раз", style = MaterialTheme.typography.body2, textAlign = TextAlign.Center)
         Text("${repetitions.coerceAtMost(REQUIRED_REPETITIONS)}/$REQUIRED_REPETITIONS", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)
 
-        if (recordingGesture != null) {
-            Text("${gestureName(recordingGesture!!)}\n$progress%", style = MaterialTheme.typography.body1, color = MaterialTheme.colors.primary, textAlign = TextAlign.Center)
+        if (selectedGesture != null) {
+            Text("${gestureName(selectedGesture!!)}\n${if (isTraining) "$progress%" else "готов"}", style = MaterialTheme.typography.body1, color = MaterialTheme.colors.primary, textAlign = TextAlign.Center)
         }
         Text(message, style = MaterialTheme.typography.caption3, textAlign = TextAlign.Center)
 
-        TrainingButton(GestureType.ACTIVATE, recordingGesture == GestureType.ACTIVATE && isRecording,
-            { begin(context, GestureType.ACTIVATE); recordingGesture=GestureType.ACTIVATE; isRecording=true; progress=0; message="Сделайте жест и нажмите Стоп" },
-            { end(context); isRecording=false })
-        TrainingButton(GestureType.NEXT_TRACK, recordingGesture == GestureType.NEXT_TRACK && isRecording,
-            { begin(context, GestureType.NEXT_TRACK); recordingGesture=GestureType.NEXT_TRACK; isRecording=true; progress=0; message="Сделайте жест и нажмите Стоп" },
-            { end(context); isRecording=false })
-        TrainingButton(GestureType.PREVIOUS_TRACK, recordingGesture == GestureType.PREVIOUS_TRACK && isRecording,
-            { begin(context, GestureType.PREVIOUS_TRACK); recordingGesture=GestureType.PREVIOUS_TRACK; isRecording=true; progress=0; message="Сделайте жест и нажмите Стоп" },
-            { end(context); isRecording=false })
-        TrainingButton(GestureType.PLAY_PAUSE, recordingGesture == GestureType.PLAY_PAUSE && isRecording,
-            { begin(context, GestureType.PLAY_PAUSE); recordingGesture=GestureType.PLAY_PAUSE; isRecording=true; progress=0; message="Сделайте жест и нажмите Стоп" },
-            { end(context); isRecording=false })
+        TrainingButton(GestureType.ACTIVATE, selectedGesture == GestureType.ACTIVATE && isTraining) {
+            if (isTraining) stop(context) else start(context, GestureType.ACTIVATE)
+            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.ACTIVATE; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
+        }
+        TrainingButton(GestureType.NEXT_TRACK, selectedGesture == GestureType.NEXT_TRACK && isTraining) {
+            if (isTraining) stop(context) else start(context, GestureType.NEXT_TRACK)
+            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.NEXT_TRACK; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
+        }
+        TrainingButton(GestureType.PREVIOUS_TRACK, selectedGesture == GestureType.PREVIOUS_TRACK && isTraining) {
+            if (isTraining) stop(context) else start(context, GestureType.PREVIOUS_TRACK)
+            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.PREVIOUS_TRACK; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
+        }
+        TrainingButton(GestureType.PLAY_PAUSE, selectedGesture == GestureType.PLAY_PAUSE && isTraining) {
+            if (isTraining) stop(context) else start(context, GestureType.PLAY_PAUSE)
+            if (isTraining) isTraining = false else { isTraining = true; selectedGesture = GestureType.PLAY_PAUSE; repetitions = 0; progress = 0; message = "Сделайте жест. Окончание определится автоматически" }
+        }
 
         Spacer(Modifier.height(4.dp))
-        Button(onClick = { context.startService(Intent(context,GestureMusicService::class.java).apply{action=GestureMusicService.ACTION_CLEAR_TRAINING}); repetitions=0; progress=0; message="Шаблоны очищены" }, modifier=Modifier.fillMaxWidth(), colors=ButtonDefaults.secondaryButtonColors()) { Text("🗑 Очистить всё") }
+        Button(onClick = { context.startService(Intent(context,GestureMusicService::class.java).apply{action=GestureMusicService.ACTION_CLEAR_TRAINING}); repetitions=0; progress=0; isTraining=false; message="Шаблоны очищены" }, modifier=Modifier.fillMaxWidth(), colors=ButtonDefaults.secondaryButtonColors()) { Text("🗑 Очистить всё") }
         Button(onClick=onBack, modifier=Modifier.fillMaxWidth(), colors=ButtonDefaults.secondaryButtonColors()) { Text("← Назад") }
     }
 }
 
 @Composable
-private fun TrainingButton(gesture: GestureType, isRecording: Boolean, onStart: () -> Unit, onStop: () -> Unit) {
-    Button(onClick={if(isRecording) onStop() else onStart()}, modifier=Modifier.fillMaxWidth(), colors=if(isRecording) ButtonDefaults.primaryButtonColors() else ButtonDefaults.secondaryButtonColors()) {
-        Text(if(isRecording) "⏹ ${gestureName(gesture)}" else "⏺ ${gestureName(gesture)}")
+private fun TrainingButton(gesture: GestureType, active: Boolean, onClick: () -> Unit) {
+    Button(onClick=onClick, modifier=Modifier.fillMaxWidth(), colors=if(active) ButtonDefaults.primaryButtonColors() else ButtonDefaults.secondaryButtonColors()) {
+        Text(if(active) "⏹ ${gestureName(gesture)}" else "▶ ${gestureName(gesture)}")
     }
 }
 
@@ -112,10 +115,10 @@ private fun gestureName(gesture: GestureType): String = when(gesture) {
     GestureType.PLAY_PAUSE -> "Play/Pause"
 }
 
-private fun begin(context: Context, gesture: GestureType) {
+private fun start(context: Context, gesture: GestureType) {
     context.startService(Intent(context,GestureMusicService::class.java).apply { action=GestureMusicService.ACTION_START_TRAINING; putExtra(GestureMusicService.EXTRA_TRAINING_GESTURE,gesture.name) })
 }
 
-private fun end(context: Context) {
+private fun stop(context: Context) {
     context.startService(Intent(context,GestureMusicService::class.java).apply { action=GestureMusicService.ACTION_STOP_TRAINING })
 }
