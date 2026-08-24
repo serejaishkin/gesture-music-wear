@@ -34,7 +34,6 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-wear-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "wearCompose" }
 androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation", version.ref = "wearCompose" }
 androidx-wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-navigation", version.ref = "wearCompose" }
-androidx-wear-tooling-preview = { group = "androidx.wear.compose", name = "wear-tooling-preview", version.ref = "wearCompose" }
 horologist-compose-layout = { group = "com.google.android.horologist", name = "horologist-compose-layout", version.ref = "horologist" }
 horologist-compose-material = { group = "com.google.android.horologist", name = "horologist-compose-material", version.ref = "horologist" }
 androidx-media = { group = "androidx.media", name = "media", version.ref = "media" }

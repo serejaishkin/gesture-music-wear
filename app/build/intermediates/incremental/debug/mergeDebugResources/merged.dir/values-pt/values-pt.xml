@@ -9,6 +9,9 @@
     <string msgid="59049573811482460" name="call_notification_screening_text">"Filtrando uma ligação recebida"</string>
     <string msgid="406453423630273620" name="close_drawer">"Fechar menu de navegação"</string>
     <string msgid="7573152094250666567" name="close_sheet">"Fechar planilha"</string>
+    <string msgid="6412144553299494336" name="confirmation_overlay_a11y_description_fail">"Falha"</string>
+    <string msgid="8809042819843332546" name="confirmation_overlay_a11y_description_phone">"Item aberto no seu smartphone"</string>
+    <string msgid="2936753235333429892" name="confirmation_overlay_a11y_description_success">"Pronto"</string>
     <string msgid="8038256446254964252" name="default_error_message">"Entrada inválida"</string>
     <string msgid="6312721426453364202" name="default_popup_window_title">"Janela pop-up"</string>
     <string msgid="1890207353314751437" name="dropdown_menu">"Menu suspenso"</string>
@@ -72,15 +75,18 @@
     <string msgid="5460405025248574620" name="m3c_tooltip_pane_description">"Dica"</string>
     <string msgid="542007171693138492" name="navigation_menu">"Menu de navegação"</string>
     <string msgid="6610465462668679431" name="not_selected">"Não selecionado"</string>
-    <string msgid="875452955155264703" name="off">"Desativado"</string>
-    <string msgid="8655164131929253426" name="on">"Ativado"</string>
     <string msgid="5941395253238309765" name="range_end">"Fim do intervalo"</string>
     <string msgid="7097486360902471446" name="range_start">"Início do intervalo"</string>
     <string msgid="6043586758067023" name="selected">"Selecionado"</string>
+    <string msgid="4139871816613051306" name="state_empty">"Vazio"</string>
+    <string msgid="5834637030682409883" name="state_off">"Desativado"</string>
+    <string msgid="1490883874751719580" name="state_on">"Ativado"</string>
     <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
     <string msgid="2561197295334830845" name="switch_role">"Chave"</string>
     <string msgid="1672349317127674378" name="tab">"Guia"</string>
     <string msgid="5946805113151406391" name="template_percent">"<ns1:g id="PERCENTAGE">%1$d</ns1:g>%%"</string>
     <string msgid="3765533235322692011" name="tooltip_description">"dica"</string>
     <string msgid="3124740595719787496" name="tooltip_label">"mostrar dica"</string>
+    <string msgid="8863821639144537553" name="ws_action_drawer_content_description">"Gaveta de ações"</string>
+    <string msgid="777117228299084604" name="ws_navigation_drawer_content_description">"Gaveta de navegação"</string>
 </resources>

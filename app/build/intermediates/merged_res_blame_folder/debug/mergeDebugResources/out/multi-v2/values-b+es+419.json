@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.yourname.gesturemusic.app-mergeDebugResources-66:/values-b+es+419/values-b+es+419.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\sergejj\\.gradle\\caches\\transforms-4\\afec0060c9b905f0fb15b37bbe3bae30\\transformed\\horologist-compose-material-0.6.17\\res\\values-b+es+419\\values-b+es+419.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,146,233,319,404,491,574,659",
+                        "endColumns": "90,86,85,84,86,82,84,80",
+                        "endOffsets": "141,228,314,399,486,569,654,735"
+                    }
+                }
+            ]
+        }
+    ]
+}

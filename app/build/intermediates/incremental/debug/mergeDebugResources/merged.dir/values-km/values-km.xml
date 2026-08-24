@@ -9,9 +9,20 @@
     <string msgid="59049573811482460" name="call_notification_screening_text">"កំពុងពិនិត្យការ​ហៅ​ចូល"</string>
     <string msgid="406453423630273620" name="close_drawer">"បិទម៉ឺនុយរុករក"</string>
     <string msgid="7573152094250666567" name="close_sheet">"បិទសន្លឹក"</string>
+    <string msgid="6412144553299494336" name="confirmation_overlay_a11y_description_fail">"បរាជ័យ"</string>
+    <string msgid="8809042819843332546" name="confirmation_overlay_a11y_description_phone">"បានបើក​នៅលើ​ទូរសព្ទ​របស់អ្នក"</string>
+    <string msgid="2936753235333429892" name="confirmation_overlay_a11y_description_success">"ជោគជ័យ"</string>
     <string msgid="8038256446254964252" name="default_error_message">"ការបញ្ចូល​មិនត្រឹមត្រូវ"</string>
     <string msgid="6312721426453364202" name="default_popup_window_title">"វិនដូ​លោតឡើង"</string>
     <string msgid="1890207353314751437" name="dropdown_menu">"ម៉ឺនុយធ្លាក់ចុះ"</string>
+    <string name="horologist_split_toggle_chip_off_state_description">បិទ</string>
+    <string name="horologist_split_toggle_chip_on_state_description">បើក</string>
+    <string name="horologist_stepper_decrease_content_description">បន្ថយ</string>
+    <string name="horologist_stepper_increase_content_description">បង្កើន</string>
+    <string name="horologist_toggle_button_off_state_description">បិទ</string>
+    <string name="horologist_toggle_button_on_state_description">បើក</string>
+    <string name="horologist_toggle_chip_off_state_description">បិទ</string>
+    <string name="horologist_toggle_chip_on_state_description">បើក</string>
     <string msgid="6827826412747255547" name="in_progress">"កំពុងដំណើរការ"</string>
     <string msgid="7933458017204019916" name="indeterminate">"បានធីកខ្លះ"</string>
     <string msgid="2988463736136100848" name="m3c_bottom_sheet_collapse_description">"បង្រួម​សន្លឹកខាងក្រោម"</string>
@@ -72,15 +83,18 @@
     <string msgid="5460405025248574620" name="m3c_tooltip_pane_description">"កំណត់​ពន្យល់"</string>
     <string msgid="542007171693138492" name="navigation_menu">"ម៉ឺនុយរុករក"</string>
     <string msgid="6610465462668679431" name="not_selected">"មិនបាន​ជ្រើសរើស"</string>
-    <string msgid="875452955155264703" name="off">"បិទ"</string>
-    <string msgid="8655164131929253426" name="on">"បើក"</string>
     <string msgid="5941395253238309765" name="range_end">"ចំណុចបញ្ចប់"</string>
     <string msgid="7097486360902471446" name="range_start">"ចំណុចចាប់ផ្ដើម"</string>
     <string msgid="6043586758067023" name="selected">"បានជ្រើសរើស"</string>
+    <string msgid="4139871816613051306" name="state_empty">"ទទេ"</string>
+    <string msgid="5834637030682409883" name="state_off">"បិទ"</string>
+    <string msgid="1490883874751719580" name="state_on">"បើក"</string>
     <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
     <string msgid="2561197295334830845" name="switch_role">"ប៊ូតុង​បិទបើក"</string>
     <string msgid="1672349317127674378" name="tab">"Tab"</string>
     <string msgid="5946805113151406391" name="template_percent">"<ns1:g id="PERCENTAGE">%1$d</ns1:g> ភាគរយ។"</string>
     <string msgid="3765533235322692011" name="tooltip_description">"កំណត់​ពន្យល់"</string>
     <string msgid="3124740595719787496" name="tooltip_label">"បង្ហាញ​កំណត់​ពន្យល់"</string>
+    <string msgid="8863821639144537553" name="ws_action_drawer_content_description">"ថត​សកម្មភាព"</string>
+    <string msgid="777117228299084604" name="ws_navigation_drawer_content_description">"ថត​រុករក"</string>
 </resources>

@@ -55,15 +55,15 @@
 29-->D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:18:68-91
 30
 31    <permission
-31-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\39d3b36b9270d00e0468995ae8a339c7\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+31-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\6ffab6b8fc128e5d5feb1b0801fada1d\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
 32        android:name="com.yourname.gesturemusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-32-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\39d3b36b9270d00e0468995ae8a339c7\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+32-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\6ffab6b8fc128e5d5feb1b0801fada1d\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
 33        android:protectionLevel="signature" />
-33-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\39d3b36b9270d00e0468995ae8a339c7\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+33-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\6ffab6b8fc128e5d5feb1b0801fada1d\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
 34
 35    <uses-permission android:name="com.yourname.gesturemusic.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-35-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\39d3b36b9270d00e0468995ae8a339c7\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
-35-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\39d3b36b9270d00e0468995ae8a339c7\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+35-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\6ffab6b8fc128e5d5feb1b0801fada1d\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+35-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\6ffab6b8fc128e5d5feb1b0801fada1d\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
 36
 37    <application
 37-->D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:20:5-53:19
@@ -72,7 +72,7 @@
 39        android:allowBackup="true"
 39-->D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:22:9-35
 40        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-40-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\39d3b36b9270d00e0468995ae8a339c7\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+40-->[androidx.core:core:1.13.1] C:\Users\sergejj\.gradle\caches\transforms-4\6ffab6b8fc128e5d5feb1b0801fada1d\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
 41        android:debuggable="true"
 42        android:extractNativeLibs="false"
 43        android:icon="@mipmap/ic_launcher"
@@ -132,84 +132,92 @@
 72            android:foregroundServiceType="mediaPlayback" />
 72-->D:\GitHub\gesture-music-wear\app\src\main\AndroidManifest.xml:51:13-58
 73
-74        <provider
-74-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
-75            android:name="androidx.startup.InitializationProvider"
-75-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
-76            android:authorities="com.yourname.gesturemusic.androidx-startup"
-76-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
-77            android:exported="false" >
-77-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
-78            <meta-data
-78-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
-79                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-79-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
-80                android:value="androidx.startup" />
-80-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\ac5d260d9cc50191c7cc21882f95dc8c\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
-81            <meta-data
-81-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:29:13-31:52
-82                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-82-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:30:17-78
-83                android:value="androidx.startup" />
-83-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\c12ff155db72c09a8b66e13d38cf2172\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:31:17-49
-84            <meta-data
-84-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-85                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-85-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
-86                android:value="androidx.startup" />
-86-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-87        </provider>
-88
-89        <activity
-89-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:23:9-25:39
-90            android:name="androidx.activity.ComponentActivity"
-90-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:24:13-63
-91            android:exported="true" />
-91-->[androidx.compose.ui:ui-test-manifest:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\767d6fc9212788092f3c597e8bee9f8c\transformed\ui-test-manifest-1.6.8\AndroidManifest.xml:25:13-36
-92        <activity
-92-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
-93            android:name="androidx.compose.ui.tooling.PreviewActivity"
-93-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
-94            android:exported="true" />
-94-->[androidx.compose.ui:ui-tooling-android:1.6.8] C:\Users\sergejj\.gradle\caches\transforms-4\8810de0188d67ca75e99dfecb4efa45f\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
-95
-96        <receiver
-96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
-97            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-97-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
-98            android:directBootAware="false"
-98-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
-99            android:enabled="true"
-99-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
-100            android:exported="true"
-100-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
-101            android:permission="android.permission.DUMP" >
-101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
-102            <intent-filter>
-102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
-103                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
-103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
-104            </intent-filter>
-105            <intent-filter>
-105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
-106                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
-106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
-107            </intent-filter>
-108            <intent-filter>
-108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
-109                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
-109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
-110            </intent-filter>
-111            <intent-filter>
-111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
-112                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
-112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\201641f54f2f2f6fad367fb58030596e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
-113            </intent-filter>
-114        </receiver>
-115    </application>
-116
-117</manifest>
+74        <uses-library
+74-->[androidx.wear.compose:compose-foundation:1.4.0-beta03] C:\Users\sergejj\.gradle\caches\transforms-4\71d0ed3b2d18fbee5022e60fe7f9428e\transformed\compose-foundation-1.4.0-beta03\AndroidManifest.xml:23:9-25:40
+75            android:name="wear-sdk"
+75-->[androidx.wear.compose:compose-foundation:1.4.0-beta03] C:\Users\sergejj\.gradle\caches\transforms-4\71d0ed3b2d18fbee5022e60fe7f9428e\transformed\compose-foundation-1.4.0-beta03\AndroidManifest.xml:24:13-36
+76            android:required="false" />
+76-->[androidx.wear.compose:compose-foundation:1.4.0-beta03] C:\Users\sergejj\.gradle\caches\transforms-4\71d0ed3b2d18fbee5022e60fe7f9428e\transformed\compose-foundation-1.4.0-beta03\AndroidManifest.xml:25:13-37
+77
+78        <activity
+78-->[androidx.compose.ui:ui-test-manifest:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\08a485d60c98e0ae8499673fc2364d4e\transformed\ui-test-manifest-1.7.0-beta05\AndroidManifest.xml:23:9-25:39
+79            android:name="androidx.activity.ComponentActivity"
+79-->[androidx.compose.ui:ui-test-manifest:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\08a485d60c98e0ae8499673fc2364d4e\transformed\ui-test-manifest-1.7.0-beta05\AndroidManifest.xml:24:13-63
+80            android:exported="true" />
+80-->[androidx.compose.ui:ui-test-manifest:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\08a485d60c98e0ae8499673fc2364d4e\transformed\ui-test-manifest-1.7.0-beta05\AndroidManifest.xml:25:13-36
+81
+82        <provider
+82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\3e73802a5abc27e3c9414269715d1348\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+83            android:name="androidx.startup.InitializationProvider"
+83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\3e73802a5abc27e3c9414269715d1348\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+84            android:authorities="com.yourname.gesturemusic.androidx-startup"
+84-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\3e73802a5abc27e3c9414269715d1348\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+85            android:exported="false" >
+85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\3e73802a5abc27e3c9414269715d1348\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+86            <meta-data
+86-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\3e73802a5abc27e3c9414269715d1348\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+87                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+87-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\3e73802a5abc27e3c9414269715d1348\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+88                android:value="androidx.startup" />
+88-->[androidx.emoji2:emoji2:1.3.0] C:\Users\sergejj\.gradle\caches\transforms-4\3e73802a5abc27e3c9414269715d1348\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+89            <meta-data
+89-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\1385549f941f74a0ace9fba45117af11\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:29:13-31:52
+90                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+90-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\1385549f941f74a0ace9fba45117af11\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:30:17-78
+91                android:value="androidx.startup" />
+91-->[androidx.lifecycle:lifecycle-process:2.8.4] C:\Users\sergejj\.gradle\caches\transforms-4\1385549f941f74a0ace9fba45117af11\transformed\lifecycle-process-2.8.4\AndroidManifest.xml:31:17-49
+92            <meta-data
+92-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+93                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+93-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+94                android:value="androidx.startup" />
+94-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+95        </provider>
+96
+97        <activity
+97-->[androidx.compose.ui:ui-tooling-android:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\cd99221524168843a9a555364b2fa342\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
+98            android:name="androidx.compose.ui.tooling.PreviewActivity"
+98-->[androidx.compose.ui:ui-tooling-android:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\cd99221524168843a9a555364b2fa342\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
+99            android:exported="true" />
+99-->[androidx.compose.ui:ui-tooling-android:1.7.0-beta05] C:\Users\sergejj\.gradle\caches\transforms-4\cd99221524168843a9a555364b2fa342\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
+100
+101        <receiver
+101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+102            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+103            android:directBootAware="false"
+103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+104            android:enabled="true"
+104-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+105            android:exported="true"
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+106            android:permission="android.permission.DUMP" >
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+107            <intent-filter>
+107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+108                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+109            </intent-filter>
+110            <intent-filter>
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+111                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+112            </intent-filter>
+113            <intent-filter>
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+114                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+115            </intent-filter>
+116            <intent-filter>
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+117                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+117-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+117-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\sergejj\.gradle\caches\transforms-4\c26a15596a80786a0c5834620a453d82\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+118            </intent-filter>
+119        </receiver>
+120    </application>
+121
+122</manifest>
