@@ -91,7 +91,9 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
             addAction(GestureMusicService.ACTION_TRAINING_PROGRESS)
         }
         context.registerReceiver(gestureReceiver, filter, Context.RECEIVER_EXPORTED)
-        sendSensitivityUpdate()
+        // FIX: do NOT call sendSensitivityUpdate() here — it starts the service
+        // without a foreground notification and crashes on Android 12+.
+        // Sensitivity is sent automatically when the user presses Start or moves a slider.
     }
 
     fun startService() {
@@ -100,6 +102,8 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
         }
         context.startForegroundService(intent)
         _isRunning.value = true
+        // Send current settings once the service is confirmed running
+        sendSensitivityUpdate()
     }
 
     fun stopService() {
@@ -112,32 +116,32 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
 
     fun updateAngleThreshold(value: Float) {
         _angleThreshold.value = value
-        sendSensitivityUpdate()
+        if (_isRunning.value) sendSensitivityUpdate()
     }
 
     fun updatePinchThreshold(value: Float) {
         _pinchThreshold.value = value
-        sendSensitivityUpdate()
+        if (_isRunning.value) sendSensitivityUpdate()
     }
 
     fun updateMinDuration(value: Long) {
         _minDuration.value = value
-        sendSensitivityUpdate()
+        if (_isRunning.value) sendSensitivityUpdate()
     }
 
     fun updateMaxDuration(value: Long) {
         _maxDuration.value = value
-        sendSensitivityUpdate()
+        if (_isRunning.value) sendSensitivityUpdate()
     }
 
     fun updateGestureCooldown(value: Long) {
         _gestureCooldown.value = value
-        sendSensitivityUpdate()
+        if (_isRunning.value) sendSensitivityUpdate()
     }
 
     fun updateLeftHand(value: Boolean) {
         _leftHand.value = value
-        sendSensitivityUpdate()
+        if (_isRunning.value) sendSensitivityUpdate()
     }
 
     fun saveSettings() {
@@ -165,7 +169,7 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
         _gestureCooldown.value = 1200L
         _leftHand.value = false
         saveSettings()
-        sendSensitivityUpdate()
+        if (_isRunning.value) sendSensitivityUpdate()
     }
 
     // --- Training ---

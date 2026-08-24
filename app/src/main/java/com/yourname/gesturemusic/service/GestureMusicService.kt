@@ -40,7 +40,6 @@ class GestureMusicService : Service(), SensorEventListener {
         const val ACTION_UPDATE_SENSITIVITY="com.yourname.gesturemusic.ACTION_UPDATE_SENSITIVITY"; const val ACTION_START_TRAINING="com.yourname.gesturemusic.ACTION_START_TRAINING"
         const val ACTION_STOP_TRAINING="com.yourname.gesturemusic.ACTION_STOP_TRAINING"; const val ACTION_CLEAR_TRAINING="com.yourname.gesturemusic.ACTION_CLEAR_TRAINING"
         const val EXTRA_ANGLE_THRESHOLD="angle_threshold"; const val EXTRA_PINCH_THRESHOLD="pinch_threshold"; const val EXTRA_COOLDOWN="gesture_cooldown"; const val EXTRA_LEFT_HAND="left_hand"; const val EXTRA_TRAINING_GESTURE="training_gesture"
-        // NEW: min/max duration constants
         const val EXTRA_MIN_DURATION="min_duration"; const val EXTRA_MAX_DURATION="max_duration"
         const val ACTION_TRAINING_PROGRESS="com.yourname.gesturemusic.TRAINING_PROGRESS"; const val EXTRA_TRAINING_PROGRESS="training_progress"; const val EXTRA_TRAINING_REPETITIONS="training_repetitions"; const val EXTRA_TRAINING_DONE="training_done"; const val EXTRA_TRAINING_SUCCESS="training_success"
     }
@@ -53,7 +52,7 @@ class GestureMusicService : Service(), SensorEventListener {
     private val screenStateReceiver=object:BroadcastReceiver(){override fun onReceive(context:Context?,intent:Intent?){when(intent?.action){Intent.ACTION_SCREEN_OFF->screenOffTime=System.currentTimeMillis();Intent.ACTION_SCREEN_ON->screenOffTime=-1L}}}
 
     override fun onCreate(){super.onCreate();sensorManager=getSystemService(Context.SENSOR_SERVICE) as SensorManager;gyroscope=sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);linearAccel=sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);mediaControllerManager=MediaControllerManager(this);wristDetector=WristRotationDetector();pinchDetector=DoublePinchDetector();gestureTrainer=GestureTrainer(this);armingManager=GestureArmingManager();val pm=getSystemService(Context.POWER_SERVICE) as PowerManager;wakeLock=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"GestureMusic::WakeLock");wakeLock.setReferenceCounted(false);vibrator=getSystemService(Context.VIBRATOR_SERVICE) as Vibrator;notificationManager=getSystemService(NotificationManager::class.java);mediaControllerManager.setStateListener{playing->isMusicPlaying=playing;if(playing)cancelIdleTimer()else startIdleTimer()};val f=IntentFilter().apply{addAction(Intent.ACTION_SCREEN_OFF);addAction(Intent.ACTION_SCREEN_ON)};if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.TIRAMISU)registerReceiver(screenStateReceiver,f,Context.RECEIVER_EXPORTED)else registerReceiver(screenStateReceiver,f);createNotificationChannel()}
-    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{when(intent?.action){ACTION_START->startGestureDetection();ACTION_STOP->stopGestureDetection();ACTION_UPDATE_SENSITIVITY->updateSensitivity(intent);ACTION_START_TRAINING->startTraining(intent);ACTION_STOP_TRAINING->cancelTraining();ACTION_CLEAR_TRAINING->clearTraining()};return START_STICKY}
+    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{when(intent?.action){ACTION_START->startGestureDetection();ACTION_STOP->stopGestureDetection();ACTION_UPDATE_SENSITIVITY->if(isRunning)updateSensitivity(intent);ACTION_START_TRAINING->startTraining(intent);ACTION_STOP_TRAINING->cancelTraining();ACTION_CLEAR_TRAINING->clearTraining()};return START_STICKY}
     override fun onBind(intent:Intent?):IBinder?=null
     override fun onDestroy(){stopGestureDetection();try{unregisterReceiver(screenStateReceiver)}catch(_:Exception){};try{mediaControllerManager.disconnect()}catch(_:Exception){};idleExecutor?.shutdown();super.onDestroy()}
     override fun onTaskRemoved(rootIntent:Intent?){startService(Intent(applicationContext,GestureMusicService::class.java).apply{action=ACTION_START});super.onTaskRemoved(rootIntent)}
@@ -61,7 +60,6 @@ class GestureMusicService : Service(), SensorEventListener {
     override fun onSensorChanged(event:SensorEvent?){event?:return;val timestamp=System.currentTimeMillis();when(event.sensor.type){Sensor.TYPE_GYROSCOPE->{lastGyroX=event.values[0];lastGyroY=event.values[1];lastGyroZ=event.values[2]};Sensor.TYPE_LINEAR_ACCELERATION->{lastLinAccX=event.values[0];lastLinAccY=event.values[1];lastLinAccZ=event.values[2];if(isTrainingMode){val e=gestureTrainer.addSample(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=gestureTrainer.getRecordingProgress();if(p!=lastTrainingProgress){lastTrainingProgress=p;sendTrainingProgress(p,gestureTrainer.getTrainingRepetitionCount(),false,false)};if(e==GestureTrainer.TrainingEvent.REPETITION_ACCEPTED)onTrainingRepetitionAccepted()}else processGestures(timestamp)}}}
     override fun onAccuracyChanged(sensor:Sensor?,accuracy:Int){}
 
-    // FIX: block only learned gestures when not armed, classic detectors always work
     private fun processGestures(timestamp:Long){
         if(screenOffTime>0&&timestamp-screenOffTime<SCREEN_OFF_BLOCK_MS)return
         if(timestamp-lastGestureTime<GESTURE_COOLDOWN_MS)return
@@ -90,7 +88,6 @@ class GestureMusicService : Service(), SensorEventListener {
 
     private fun startGestureDetection(){if(isRunning)return;isRunning=true;lastGestureTime=0L;screenOffTime=-1L;try{mediaControllerManager.connect()}catch(e:Exception){Log.e(TAG,"MediaController connect failed",e)};ensureSensorsRegistered();startForeground(NOTIFICATION_ID,buildNotification())}
     private fun stopGestureDetection(){if(!isRunning)return;isRunning=false;sensorManager.unregisterListener(this);if(wakeLock.isHeld)wakeLock.release();wristDetector.reset();pinchDetector.reset();armingManager.deactivate();stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}
-    // FIX: pass minDuration/maxDuration to WristRotationDetector, thresholdDown and cooldown to DoublePinchDetector
     private fun updateSensitivity(intent:Intent){
         val angle=intent.getFloatExtra(EXTRA_ANGLE_THRESHOLD,28f)
         val pinch=intent.getFloatExtra(EXTRA_PINCH_THRESHOLD,3f)
