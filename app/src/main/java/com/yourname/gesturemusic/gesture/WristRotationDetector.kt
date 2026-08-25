@@ -33,6 +33,7 @@ class WristRotationDetector(
     private data class Sample(
         val timestamp: Long,
         val gyroX: Float,
+        val rawGyroX: Float,
         val linAccY: Float
     )
 
@@ -75,11 +76,13 @@ class WristRotationDetector(
 
         idleStartTime = 0L
         samples.removeAll { timestamp - it.timestamp > windowMs }
-        samples.add(Sample(timestamp, filteredGyroX, linAccY))
+        samples.add(Sample(timestamp, filteredGyroX, gyroX, linAccY))
 
         if (samples.size < 2) return null
 
-        val maxAngularSpeed = samples.maxOf { abs(it.gyroX) }
+        // The low-pass filter attenuates sharp peaks of a fast flick, so the
+        // speed gate also considers the raw sensor value.
+        val maxAngularSpeed = samples.maxOf { maxOf(abs(it.gyroX), abs(it.rawGyroX)) }
 
         // Require a clearly intentional rotation, not a slow hand adjustment.
         if (maxAngularSpeed < minAngularSpeed) return null
@@ -89,7 +92,7 @@ class WristRotationDetector(
         val positive = samples.count { it.gyroX > idleThreshold }
         val negative = samples.count { it.gyroX < -idleThreshold }
         val dominant = maxOf(positive, negative)
-        if (dominant < samples.size * 0.70f) return null
+        if (dominant < samples.size * 0.60f) return null
 
         var angle = 0f
         for (i in 1 until samples.size) {

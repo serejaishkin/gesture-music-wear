@@ -23,6 +23,7 @@ class GestureTrainer(context: Context) {
         private const val START_MOTION_THRESHOLD = 0.45f
         private const val END_MOTION_THRESHOLD = 0.18f
         private const val QUIET_SAMPLES_TO_END = 8
+        private const val RECOGNITION_COOLDOWN_MS = 1200L
     }
 
     enum class TrainingEvent { NONE, STARTED, REPETITION_ACCEPTED }
@@ -36,6 +37,7 @@ class GestureTrainer(context: Context) {
     private var quietSamples = 0
     private var previousSample: Sample? = null
     private val trainedGestures = mutableMapOf<GestureType, TrainedGesture>()
+    private var lastRecognitionTime = 0L
 
     @Serializable data class Sample(val gx: Float, val gy: Float, val gz: Float, val ax: Float, val ay: Float, val az: Float)
     @Serializable data class TrainedGesture(val gestureType: String, val samples: List<Sample>)
@@ -136,6 +138,7 @@ class GestureTrainer(context: Context) {
 
     fun recognize(gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float): GestureType? {
         if (trainingSession || isRecording || trainedGestures.isEmpty()) return null
+        if (System.currentTimeMillis() - lastRecognitionTime < RECOGNITION_COOLDOWN_MS) return null
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
         if (currentRecording.size > SAMPLE_SIZE) currentRecording.removeAt(0)
         if (currentRecording.size < MIN_SAMPLES || motionEnergy(currentRecording) < MIN_MOTION_ENERGY) return null
@@ -148,7 +151,13 @@ class GestureTrainer(context: Context) {
         }
         if (bestMatch != null && bestScore <= DTW_THRESHOLD) {
             currentRecording.clear()
+            lastRecognitionTime = System.currentTimeMillis()
             return bestMatch
+        }
+        // Window full but no match: drop the older half so a stale motion
+        // doesn't keep poisoning every subsequent DTW evaluation.
+        if (currentRecording.size >= SAMPLE_SIZE) {
+            currentRecording.subList(0, SAMPLE_SIZE / 2).clear()
         }
         return null
     }

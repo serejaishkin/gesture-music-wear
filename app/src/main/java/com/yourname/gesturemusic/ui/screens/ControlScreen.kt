@@ -76,6 +76,6 @@ fun ControlScreen(viewModel: GestureViewModel = viewModel()) {
             Text(lastGesture, style = MaterialTheme.typography.caption3, color = MaterialTheme.colors.secondary, textAlign = TextAlign.Center)
         }
         Spacer(Modifier.height(2.dp))
-        Text("➡️ вправо: prev\n⬅️ влево: next\n👌 щипок: play/pause", style = MaterialTheme.typography.caption3, color = MaterialTheme.colors.onSurfaceVariant, textAlign = TextAlign.Center)
+        Text("Поворот кисти вправо ➡️ next\nПоворот влево ⬅️ prev\n(для левой руки — наоборот)\n👌 двойной щипок: play/pause", style = MaterialTheme.typography.caption3, color = MaterialTheme.colors.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }

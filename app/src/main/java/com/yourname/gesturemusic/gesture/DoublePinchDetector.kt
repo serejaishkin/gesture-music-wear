@@ -48,6 +48,7 @@ class DoublePinchDetector(
         private const val REARM_ACCEL = 1.0f
         private const val REARM_STABLE_MS = 120L
         private const val PINCH_TIMEOUT_MS = 300L
+        private const val FALLBACK_REARM_MS = 2500L
     }
 
     private var lastGestureTime = 0L
@@ -80,6 +81,13 @@ class DoublePinchDetector(
                 }
             } else {
                 stableStartTime = 0L
+                // Fallback: if the hand never settles quietly (e.g. walking),
+                // still re-arm after a generous timeout so the detector can't
+                // get stuck disarmed forever.
+                if (timestamp - lastGestureTime >= FALLBACK_REARM_MS) {
+                    armed = true
+                    Log.d(TAG, "Detector re-armed (fallback timeout)")
+                }
             }
             return null
         }
