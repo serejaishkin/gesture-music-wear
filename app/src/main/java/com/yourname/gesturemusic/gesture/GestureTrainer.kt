@@ -24,6 +24,10 @@ class GestureTrainer(context: Context) {
         private const val END_MOTION_THRESHOLD = 0.18f
         private const val QUIET_SAMPLES_TO_END = 8
         private const val RECOGNITION_COOLDOWN_MS = 1200L
+        // DTW is O(n^2) per trained gesture; running it on every sensor
+        // sample (~50 Hz) overloads the main thread once several gestures
+        // are trained. ~10 evaluations/sec is plenty responsive.
+        private const val EVALUATION_INTERVAL_MS = 100L
     }
 
     enum class TrainingEvent { NONE, STARTED, REPETITION_ACCEPTED }
@@ -38,6 +42,7 @@ class GestureTrainer(context: Context) {
     private var previousSample: Sample? = null
     private val trainedGestures = mutableMapOf<GestureType, TrainedGesture>()
     private var lastRecognitionTime = 0L
+    private var lastEvaluationTime = 0L
 
     @Serializable data class Sample(val gx: Float, val gy: Float, val gz: Float, val ax: Float, val ay: Float, val az: Float)
     @Serializable data class TrainedGesture(val gestureType: String, val samples: List<Sample>)
@@ -138,9 +143,12 @@ class GestureTrainer(context: Context) {
 
     fun recognize(gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float): GestureType? {
         if (trainingSession || isRecording || trainedGestures.isEmpty()) return null
-        if (System.currentTimeMillis() - lastRecognitionTime < RECOGNITION_COOLDOWN_MS) return null
+        val now = System.currentTimeMillis()
+        if (now - lastRecognitionTime < RECOGNITION_COOLDOWN_MS) return null
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
         if (currentRecording.size > SAMPLE_SIZE) currentRecording.removeAt(0)
+        if (now - lastEvaluationTime < EVALUATION_INTERVAL_MS) return null
+        lastEvaluationTime = now
         if (currentRecording.size < MIN_SAMPLES || motionEnergy(currentRecording) < MIN_MOTION_ENERGY) return null
         val candidate = normalize(currentRecording)
         var bestMatch: GestureType? = null

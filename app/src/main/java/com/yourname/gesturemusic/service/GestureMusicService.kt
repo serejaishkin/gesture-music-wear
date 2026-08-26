@@ -61,7 +61,6 @@ class GestureMusicService : Service(), SensorEventListener {
         if(timestamp-lastGestureTime<GESTURE_COOLDOWN_MS)return
         armingManager.update(timestamp)
         val learned=gestureTrainer.recognize(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ)
-        Log.d(TAG, "processGestures: learned=$learned, armed=${armingManager.isArmed}")
         if(learned==GestureType.ACTIVATE){
             armingManager.activate(timestamp)
             lastGestureTime=timestamp
@@ -70,8 +69,7 @@ class GestureMusicService : Service(), SensorEventListener {
             return
         }
         val effectiveLearned=if(gestureTrainer.hasTrainedGesture(GestureType.ACTIVATE)&&!armingManager.isArmed)null else learned
-        val gesture=effectiveLearned?:run{val w=wristDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=pinchDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);Log.d(TAG,"Classic detectors: wrist=$w pinch=$p");w?:p}
-        Log.d(TAG, "Final gesture: $gesture")
+        val gesture=effectiveLearned?:run{val w=wristDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=pinchDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);w?:p}
         gesture?.let{armingManager.touch(timestamp);executeGesture(it,timestamp)}
     }
     private fun executeGesture(gesture:GestureType,timestamp:Long=System.currentTimeMillis()){
@@ -95,7 +93,7 @@ class GestureMusicService : Service(), SensorEventListener {
     }
 
     private fun startTraining(intent:Intent){val name=intent.getStringExtra(EXTRA_TRAINING_GESTURE)?:return;trainingGestureType=try{GestureType.valueOf(name)}catch(_:IllegalArgumentException){return};if(!isRunning)startGestureDetection();ensureSensorsRegistered();gestureTrainer.startTraining();isTrainingMode=true;lastTrainingProgress=0;sendTrainingProgress(0,0,false,false);vibrate()}
-    private fun onTrainingRepetitionAccepted(){val count=gestureTrainer.getTrainingRepetitionCount();sendTrainingProgress(100,count,false,false);vibrate();if(count>=gestureTrainer.getRequiredRepetitions()){val type=trainingGestureType?:return;val success=gestureTrainer.saveTraining(type);isTrainingMode=false;trainingGestureType=null;sendTrainingProgress(100,count,true,success);if(success)vibrateLong()}}
+    private fun onTrainingRepetitionAccepted(){val count=gestureTrainer.getTrainingRepetitionCount();sendTrainingProgress(100,count,false,false);vibrate();if(count>=gestureTrainer.getRequiredRepetitions()){val type=trainingGestureType?:return;isTrainingMode=false;trainingGestureType=null;sendTrainingProgress(100,count,true,false);Thread{val success=try{gestureTrainer.saveTraining(type)}catch(e:Exception){Log.e(TAG,"saveTraining failed",e);false};sendTrainingProgress(100,count,true,success);if(success)vibrateLong()}.start()}}
     private fun cancelTraining(){isTrainingMode=false;trainingGestureType=null;gestureTrainer.cancelTraining();sendTrainingProgress(0,gestureTrainer.getTrainingRepetitionCount(),true,false)}
     private fun clearTraining(){gestureTrainer.clearAll();armingManager.deactivate();trainingGestureType=null;isTrainingMode=false;sendTrainingProgress(0,0,true,true)}
     private fun ensureSensorsRegistered(){gyroscope?.let{sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME)};linearAccel?.let{sensorManager.registerListener(this,it,SensorManager.SENSOR_DELAY_GAME)};if(!wakeLock.isHeld)wakeLock.acquire()}
