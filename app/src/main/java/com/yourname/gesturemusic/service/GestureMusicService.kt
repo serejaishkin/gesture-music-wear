@@ -36,6 +36,7 @@ class GestureMusicService : Service(), SensorEventListener, GestureDetectionStra
     companion object {
         private const val TAG="GestureMusicService"; private const val CHANNEL_ID="gesture_music_channel"; private const val NOTIFICATION_ID=1
         private const val GESTURE_COOLDOWN_MS=400L; private const val SCREEN_OFF_BLOCK_MS=800L
+        @Volatile var isRunningStatic=false; private set
         const val ACTION_START="com.yourname.gesturemusic.ACTION_START"; const val ACTION_STOP="com.yourname.gesturemusic.ACTION_STOP"
         const val ACTION_UPDATE_SENSITIVITY="com.yourname.gesturemusic.ACTION_UPDATE_SENSITIVITY"; const val ACTION_START_TRAINING="com.yourname.gesturemusic.ACTION_START_TRAINING"
         const val ACTION_STOP_TRAINING="com.yourname.gesturemusic.ACTION_STOP_TRAINING"; const val ACTION_CLEAR_TRAINING="com.yourname.gesturemusic.ACTION_CLEAR_TRAINING"
@@ -208,6 +209,7 @@ class GestureMusicService : Service(), SensorEventListener, GestureDetectionStra
     private fun startGestureDetection(){
         if(isRunning)return
         isRunning=true
+        isRunningStatic=true
         lastGestureTime=0L
         screenOffTime=-1L
         try{mediaControllerManager.connect()}catch(e:Exception){Log.e(TAG,"MediaController connect failed",e)}
@@ -231,6 +233,7 @@ class GestureMusicService : Service(), SensorEventListener, GestureDetectionStra
     private fun stopGestureDetection(){
         if(!isRunning)return
         isRunning=false
+        isRunningStatic=false
         activeStrategy?.stop()
         activeStrategy = null
         sensorManager.unregisterListener(this)

@@ -33,16 +33,34 @@ class SamsungGestureStrategy : GestureDetectionStrategy {
 
     override fun isAvailable(context: Context): Boolean {
         return try {
-            // Check if Samsung SDK is available on this device
-            Class.forName("com.samsung.android.sdk.gesture.SlatestureManager")
-            // Also verify we're on a Samsung device
             val manufacturer = android.os.Build.MANUFACTURER?.lowercase() ?: ""
             val brand = android.os.Build.BRAND?.lowercase() ?: ""
-            val available = manufacturer.contains("samsung") || brand.contains("samsung")
-            Log.d(TAG, "Samsung SDK available: $available (manufacturer=$manufacturer, brand=$brand)")
-            available
-        } catch (e: ClassNotFoundException) {
-            Log.d(TAG, "Samsung SDK not available: ${e.message}")
+            val isSamsungDevice = manufacturer.contains("samsung") || brand.contains("samsung")
+            if (!isSamsungDevice) {
+                Log.d(TAG, "Not a Samsung device: manufacturer=$manufacturer, brand=$brand")
+                return false
+            }
+            // Try to load Samsung SDK class — it's available on Galaxy Watch 4+
+            // with One UI Watch, but the app must include the SDK dependency.
+            // If the class isn't in classpath, we gracefully fall back.
+            try {
+                Class.forName("com.samsung.android.sdk.gesture.SlatestureManager")
+                Log.d(TAG, "Samsung Gesture SDK class found")
+                true
+            } catch (e: ClassNotFoundException) {
+                // SDK not bundled — try system classloader (available on device framework)
+                try {
+                    val systemCl = ClassLoader.getSystemClassLoader()
+                    systemCl?.loadClass("com.samsung.android.sdk.gesture.SlatestureManager")
+                    Log.d(TAG, "Samsung Gesture SDK found via system classloader")
+                    true
+                } catch (e2: ClassNotFoundException) {
+                    Log.d(TAG, "Samsung SDK not in app or system classpath — falling back to raw sensors")
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Samsung detection failed: ${e.message}")
             false
         }
     }

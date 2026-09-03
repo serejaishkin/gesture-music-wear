@@ -25,6 +25,11 @@ import com.yourname.gesturemusic.viewmodel.GestureViewModel
 @Composable
 fun ControlScreen(viewModel: GestureViewModel = viewModel()) {
     var showTraining by remember { mutableStateOf(false) }
+    var showPlayer by remember { mutableStateOf(false) }
+    if (showPlayer) {
+        PlayerScreen(onBack = { showPlayer = false })
+        return
+    }
     if (showTraining) {
         TrainingScreen(onBack = { showTraining = false })
         return
@@ -88,6 +93,9 @@ fun ControlScreen(viewModel: GestureViewModel = viewModel()) {
         }
         item {
             Button(onClick = viewModel::restoreDefaults, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.secondaryButtonColors()) { Text("↺ Сбросить") }
+        }
+        item {
+            Button(onClick = { showPlayer = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.primaryButtonColors()) { Text("🎶 Плеер") }
         }
         item {
             Button(onClick = { showTraining = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.secondaryButtonColors()) { Text("🎓 Обучение") }
