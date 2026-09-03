@@ -32,6 +32,7 @@ fun ControlScreen(viewModel: GestureViewModel = viewModel()) {
 
     val isRunning by viewModel.isRunning
     val lastGesture by viewModel.lastGesture
+    val strategyName by viewModel.strategyName
     val angleThreshold by viewModel.angleThreshold
     val pinchThreshold by viewModel.pinchThreshold
     val minDuration by viewModel.minDuration
@@ -56,6 +57,16 @@ fun ControlScreen(viewModel: GestureViewModel = viewModel()) {
                 style = MaterialTheme.typography.body2,
                 textAlign = TextAlign.Center
             )
+        }
+        if (isRunning && strategyName.isNotEmpty()) {
+            item {
+                Text(
+                    "Движок: $strategyName",
+                    style = MaterialTheme.typography.caption3,
+                    color = MaterialTheme.colors.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
         item {
             Button(onClick = { if (isRunning) viewModel.stopService() else viewModel.startService() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.primaryButtonColors()) {

@@ -60,6 +60,9 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
     private val _trainingSuccess = mutableStateOf(false)
     val trainingSuccess: State<Boolean> = _trainingSuccess
 
+    private val _strategyName = mutableStateOf("—")
+    val strategyName: State<String> = _strategyName
+
     private val gestureReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -81,6 +84,9 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
                     _trainingDone.value = intent.getBooleanExtra(GestureMusicService.EXTRA_TRAINING_DONE, false)
                     _trainingSuccess.value = intent.getBooleanExtra(GestureMusicService.EXTRA_TRAINING_SUCCESS, false)
                 }
+                GestureMusicService.ACTION_STRATEGY_INFO -> {
+                    _strategyName.value = intent.getStringExtra(GestureMusicService.EXTRA_STRATEGY_NAME) ?: "—"
+                }
             }
         }
     }
@@ -89,6 +95,7 @@ class GestureViewModel(application: Application) : AndroidViewModel(application)
         val filter = IntentFilter().apply {
             addAction("com.yourname.gesturemusic.GESTURE_DETECTED")
             addAction(GestureMusicService.ACTION_TRAINING_PROGRESS)
+            addAction(GestureMusicService.ACTION_STRATEGY_INFO)
         }
         context.registerReceiver(gestureReceiver, filter, Context.RECEIVER_EXPORTED)
         // FIX: do NOT call sendSensitivityUpdate() here — it starts the service
