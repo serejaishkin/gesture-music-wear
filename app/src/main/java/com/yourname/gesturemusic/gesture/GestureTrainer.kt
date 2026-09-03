@@ -2,6 +2,7 @@ package com.yourname.gesturemusic.gesture
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -143,7 +144,7 @@ class GestureTrainer(context: Context) {
 
     fun recognize(gx: Float, gy: Float, gz: Float, ax: Float, ay: Float, az: Float): GestureType? {
         if (trainingSession || isRecording || trainedGestures.isEmpty()) return null
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime()
         if (now - lastRecognitionTime < RECOGNITION_COOLDOWN_MS) return null
         currentRecording += Sample(gx, gy, gz, ax, ay, az)
         if (currentRecording.size > SAMPLE_SIZE) currentRecording.removeAt(0)
@@ -159,7 +160,7 @@ class GestureTrainer(context: Context) {
         }
         if (bestMatch != null && bestScore <= DTW_THRESHOLD) {
             currentRecording.clear()
-            lastRecognitionTime = System.currentTimeMillis()
+            lastRecognitionTime = SystemClock.elapsedRealtime()
             return bestMatch
         }
         // Window full but no match: drop the older half so a stale motion

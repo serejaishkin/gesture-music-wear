@@ -16,6 +16,7 @@ import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
@@ -45,7 +46,7 @@ class GestureMusicService : Service(), SensorEventListener {
     private lateinit var wakeLock:PowerManager.WakeLock; private lateinit var vibrator:Vibrator; private lateinit var notificationManager:NotificationManager
     private var isRunning=false; private var isMusicPlaying=false; private var lastGestureTime=0L; private var screenOffTime=-1L; private var isTrainingMode=false; private var trainingGestureType:GestureType?=null; private var lastTrainingProgress=-1
     private var lastGyroX=0f; private var lastGyroY=0f; private var lastGyroZ=0f; private var lastLinAccX=0f; private var lastLinAccY=0f; private var lastLinAccZ=0f
-    private val screenStateReceiver=object:BroadcastReceiver(){override fun onReceive(context:Context?,intent:Intent?){when(intent?.action){Intent.ACTION_SCREEN_OFF->screenOffTime=System.currentTimeMillis();Intent.ACTION_SCREEN_ON->screenOffTime=-1L}}}
+    private val screenStateReceiver=object:BroadcastReceiver(){override fun onReceive(context:Context?,intent:Intent?){when(intent?.action){Intent.ACTION_SCREEN_OFF->screenOffTime=SystemClock.elapsedRealtime();Intent.ACTION_SCREEN_ON->screenOffTime=-1L}}}
 
     override fun onCreate(){super.onCreate();sensorManager=getSystemService(Context.SENSOR_SERVICE) as SensorManager;gyroscope=sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);linearAccel=sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);mediaControllerManager=MediaControllerManager(this);wristDetector=WristRotationDetector();pinchDetector=DoublePinchDetector();gestureTrainer=GestureTrainer(this);armingManager=GestureArmingManager();val pm=getSystemService(Context.POWER_SERVICE) as PowerManager;wakeLock=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"GestureMusic::WakeLock");wakeLock.setReferenceCounted(false);vibrator=getSystemService(Context.VIBRATOR_SERVICE) as Vibrator;notificationManager=getSystemService(NotificationManager::class.java);mediaControllerManager.setStateListener{playing->isMusicPlaying=playing};val f=IntentFilter().apply{addAction(Intent.ACTION_SCREEN_OFF);addAction(Intent.ACTION_SCREEN_ON)};if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.TIRAMISU)registerReceiver(screenStateReceiver,f,Context.RECEIVER_EXPORTED)else registerReceiver(screenStateReceiver,f);createNotificationChannel()}
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{when(intent?.action){ACTION_START->startGestureDetection();ACTION_STOP->stopGestureDetection();ACTION_UPDATE_SENSITIVITY->if(isRunning)updateSensitivity(intent);ACTION_START_TRAINING->startTraining(intent);ACTION_STOP_TRAINING->cancelTraining();ACTION_CLEAR_TRAINING->clearTraining()};return START_STICKY}
@@ -53,7 +54,7 @@ class GestureMusicService : Service(), SensorEventListener {
     override fun onDestroy(){stopGestureDetection();try{unregisterReceiver(screenStateReceiver)}catch(_:Exception){};try{mediaControllerManager.disconnect()}catch(_:Exception){};super.onDestroy()}
     override fun onTaskRemoved(rootIntent:Intent?){startService(Intent(applicationContext,GestureMusicService::class.java).apply{action=ACTION_START});super.onTaskRemoved(rootIntent)}
 
-    override fun onSensorChanged(event:SensorEvent?){event?:return;val timestamp=System.currentTimeMillis();when(event.sensor.type){Sensor.TYPE_GYROSCOPE->{lastGyroX=event.values[0];lastGyroY=event.values[1];lastGyroZ=event.values[2]};Sensor.TYPE_LINEAR_ACCELERATION->{lastLinAccX=event.values[0];lastLinAccY=event.values[1];lastLinAccZ=event.values[2];if(isTrainingMode){val e=gestureTrainer.addSample(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=gestureTrainer.getRecordingProgress();if(p!=lastTrainingProgress){lastTrainingProgress=p;sendTrainingProgress(p,gestureTrainer.getTrainingRepetitionCount(),false,false)};if(e==GestureTrainer.TrainingEvent.REPETITION_ACCEPTED)onTrainingRepetitionAccepted()}else processGestures(timestamp)}}}
+    override fun onSensorChanged(event:SensorEvent?){event?:return;val timestamp=SystemClock.elapsedRealtime();when(event.sensor.type){Sensor.TYPE_GYROSCOPE->{lastGyroX=event.values[0];lastGyroY=event.values[1];lastGyroZ=event.values[2]};Sensor.TYPE_LINEAR_ACCELERATION->{lastLinAccX=event.values[0];lastLinAccY=event.values[1];lastLinAccZ=event.values[2];if(isTrainingMode){val e=gestureTrainer.addSample(lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=gestureTrainer.getRecordingProgress();if(p!=lastTrainingProgress){lastTrainingProgress=p;sendTrainingProgress(p,gestureTrainer.getTrainingRepetitionCount(),false,false)};if(e==GestureTrainer.TrainingEvent.REPETITION_ACCEPTED)onTrainingRepetitionAccepted()}else processGestures(timestamp)}}}
     override fun onAccuracyChanged(sensor:Sensor?,accuracy:Int){}
 
     private fun processGestures(timestamp:Long){
@@ -72,7 +73,7 @@ class GestureMusicService : Service(), SensorEventListener {
         val gesture=effectiveLearned?:run{val w=wristDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);val p=pinchDetector.process(timestamp,lastGyroX,lastGyroY,lastGyroZ,lastLinAccX,lastLinAccY,lastLinAccZ);w?:p}
         gesture?.let{armingManager.touch(timestamp);executeGesture(it,timestamp)}
     }
-    private fun executeGesture(gesture:GestureType,timestamp:Long=System.currentTimeMillis()){
+    private fun executeGesture(gesture:GestureType,timestamp:Long=SystemClock.elapsedRealtime()){
         Log.d(TAG, "executeGesture: $gesture")
         if(gesture==GestureType.ACTIVATE){
             armingManager.activate(timestamp)

@@ -1,7 +1,6 @@
 package com.yourname.gesturemusic.media
 
 import android.content.Context
-import android.content.Intent
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
@@ -66,19 +65,8 @@ class MediaControllerManager(private val context: Context) {
             val downEvent = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0)
             val upEvent = KeyEvent(downTime, downTime + 50, KeyEvent.ACTION_UP, keyCode, 0)
 
-            // Method 1: AudioManager (local sessions)
             audioManager.dispatchMediaKeyEvent(downEvent)
             handler.postDelayed({ audioManager.dispatchMediaKeyEvent(upEvent) }, 50)
-
-            // Method 2: Media button broadcast (remote/Bluetooth sessions on Wear OS)
-            val intentDown = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
-                putExtra(Intent.EXTRA_KEY_EVENT, downEvent)
-            }
-            val intentUp = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
-                putExtra(Intent.EXTRA_KEY_EVENT, upEvent)
-            }
-            appContext.sendOrderedBroadcast(intentDown, null)
-            handler.postDelayed({ appContext.sendOrderedBroadcast(intentUp, null) }, 50)
 
             Log.d(TAG, "Media key sent: keyCode=$keyCode")
         } catch (e: Exception) {
