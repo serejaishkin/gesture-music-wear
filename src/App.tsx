@@ -8,7 +8,7 @@ import { WatchFrame, WatchScreenType } from './ui/components/WatchFrame';
 import { GestureSimulator } from './ui/components/GestureSimulator';
 import { QuickAccessTileCard } from './ui/components/QuickAccessTileCard';
 import { audioPlayer } from './media/AudioPlayerService';
-import { Watch, Music2, Radio, Info } from 'lucide-react';
+import { Watch, Music2, Radio, Info, Download } from 'lucide-react';
 
 export function App() {
   const [currentScreen, setCurrentScreen] = useState<WatchScreenType>('tile');
@@ -85,6 +85,17 @@ export function App() {
 
         {/* Global status pills & Mode Switcher */}
         <div className="flex items-center gap-2 text-xs flex-wrap">
+          {/* Direct APK Download Button */}
+          <a
+            href="./gesture-music-wear.apk"
+            download="gesture-music-wear.apk"
+            title="Скачать собранный APK пакет (85 КБ)"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900 transition-all shadow-sm active:scale-95"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Скачать APK</span>
+          </a>
+
           {/* Mode Switcher Button */}
           <button
             type="button"
