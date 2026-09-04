@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 export type WatchScreenType = 'tile' | 'control' | 'player' | 'training';
 
@@ -6,6 +6,7 @@ interface WatchFrameProps {
   children: React.ReactNode;
   currentScreen?: WatchScreenType;
   onSelectScreen?: (screen: WatchScreenType) => void;
+  standalone?: boolean;
 }
 
 const SCREENS: Array<{ id: WatchScreenType; label: string; icon: string }> = [
@@ -17,20 +18,61 @@ const SCREENS: Array<{ id: WatchScreenType; label: string; icon: string }> = [
 
 export const WatchFrame: React.FC<WatchFrameProps> = ({
   children,
-  currentScreen,
+  currentScreen = 'tile',
   onSelectScreen,
+  standalone = false,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const [timeStr, setTimeStr] = useState('10:08');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const d = new Date();
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      setTimeStr(`${h}:${m}`);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null || !onSelectScreen) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Only trigger swipe if horizontal movement is dominant and > 45px
+    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+      const currentIndex = SCREENS.findIndex((s) => s.id === currentScreen);
+      if (deltaX < 0 && currentIndex < SCREENS.length - 1) {
+        // Swipe left -> next screen
+        onSelectScreen(SCREENS[currentIndex + 1].id);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right -> previous screen
+        onSelectScreen(SCREENS[currentIndex - 1].id);
+      }
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   return (
-    <div className="flex flex-col items-center select-none relative">
+    <div className={`flex flex-col items-center select-none relative ${standalone ? 'p-2' : ''}`}>
       {/* Top Watch Band Lug */}
-      <div className="w-32 h-6 bg-gradient-to-b from-neutral-800 to-neutral-900 rounded-t-lg border-t border-neutral-700 shadow-md flex items-center justify-center">
+      <div className="w-32 h-5 sm:h-6 bg-gradient-to-b from-neutral-800 to-neutral-900 rounded-t-lg border-t border-neutral-700 shadow-md flex items-center justify-center">
         <div className="w-16 h-1 bg-neutral-700/50 rounded-full" />
       </div>
 
       {/* Watch Body Outer Bezel (Galaxy Watch 4+ circular casing) */}
-      <div className="relative w-[340px] h-[340px] rounded-full p-2.5 bg-gradient-to-tr from-neutral-900 via-neutral-800 to-neutral-900 shadow-2xl shadow-black/80 border-4 border-neutral-700 flex items-center justify-center">
+      <div className="relative w-[330px] h-[330px] sm:w-[350px] sm:h-[350px] rounded-full p-2 sm:p-2.5 bg-gradient-to-tr from-neutral-900 via-neutral-800 to-neutral-900 shadow-2xl shadow-black/80 border-4 border-neutral-700 flex items-center justify-center transition-all">
         {/* Metallic Bezel Ring */}
         <div className="absolute inset-1 rounded-full border border-neutral-600/40 pointer-events-none" />
 
@@ -38,19 +80,21 @@ export const WatchFrame: React.FC<WatchFrameProps> = ({
         <button
           type="button"
           onClick={() => onSelectScreen && onSelectScreen(currentScreen === 'tile' ? 'control' : 'tile')}
-          title="Верхняя физическая кнопка (Домой / Плитка)"
-          className="absolute -right-2.5 top-[30%] w-1.5 h-10 bg-neutral-600 hover:bg-cyan-500 rounded-r-md shadow border border-neutral-500/50 cursor-pointer active:scale-95 transition-colors"
+          title="Верхняя кнопка (Домой / Настройки)"
+          className="absolute -right-2.5 top-[30%] w-2 h-10 bg-neutral-600 hover:bg-cyan-500 rounded-r-md shadow border border-neutral-500/50 cursor-pointer active:scale-95 transition-colors"
         />
         <button
           type="button"
           onClick={() => onSelectScreen && onSelectScreen(currentScreen === 'player' ? 'control' : 'player')}
-          title="Нижняя физическая кнопка (Назад / Плеер)"
-          className="absolute -right-2.5 top-[60%] w-1.5 h-8 bg-neutral-600 hover:bg-cyan-500 rounded-r-md shadow border border-neutral-500/50 cursor-pointer active:scale-95 transition-colors"
+          title="Нижняя кнопка (Назад / Плеер)"
+          className="absolute -right-2.5 top-[60%] w-2 h-8 bg-neutral-600 hover:bg-cyan-500 rounded-r-md shadow border border-neutral-500/50 cursor-pointer active:scale-95 transition-colors"
         />
 
         {/* Inner Display (Round AMOLED Screen) */}
         <div
           ref={scrollRef}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           className="w-full h-full rounded-full bg-black overflow-y-auto overflow-x-hidden relative flex flex-col items-center scroll-smooth focus:outline-none"
           style={{
             scrollbarWidth: 'none',
@@ -58,14 +102,14 @@ export const WatchFrame: React.FC<WatchFrameProps> = ({
           }}
         >
           {/* Top Status Bar & Wear OS Page Indicator */}
-          <div className="w-full pt-4 pb-1 flex flex-col items-center justify-center gap-1">
+          <div className="w-full pt-3 sm:pt-4 pb-1 flex flex-col items-center justify-center gap-1 shrink-0">
             <span className="text-[10px] text-neutral-400 font-mono tracking-wider">
-              10:08
+              {timeStr}
             </span>
 
             {/* Wear OS Page Indicator Dots */}
             {onSelectScreen && currentScreen && (
-              <div className="flex items-center gap-1.5 bg-neutral-900/60 px-2.5 py-0.5 rounded-full border border-white/5">
+              <div className="flex items-center gap-1.5 bg-neutral-900/80 px-2.5 py-0.5 rounded-full border border-white/5">
                 {SCREENS.map((s) => {
                   const isActive = currentScreen === s.id;
                   return (
@@ -94,7 +138,7 @@ export const WatchFrame: React.FC<WatchFrameProps> = ({
       </div>
 
       {/* Bottom Watch Band Lug */}
-      <div className="w-32 h-6 bg-gradient-to-t from-neutral-800 to-neutral-900 rounded-b-lg border-b border-neutral-700 shadow-md flex items-center justify-center">
+      <div className="w-32 h-5 sm:h-6 bg-gradient-to-t from-neutral-800 to-neutral-900 rounded-b-lg border-b border-neutral-700 shadow-md flex items-center justify-center">
         <div className="w-16 h-1 bg-neutral-700/50 rounded-full" />
       </div>
     </div>

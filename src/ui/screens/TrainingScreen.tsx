@@ -32,6 +32,7 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   }, [trainingDone, trainingSuccess, onBack]);
 
   const sessionActive = activeGesture !== null && !trainingDone;
+  const lastRepStats = gestureManager.getLastRepetitionStats();
 
   const getGestureLabel = (type: GestureType | null): string => {
     switch (type) {
@@ -93,6 +94,21 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
       {/* Repetitions Counter */}
       <div className="text-xs font-medium text-neutral-300">
         Повторов: <span className="text-cyan-400 font-bold">{trainingRepetitions}</span>/5
+      </div>
+
+      {/* Speed / Tempo Feedback for Last Repetition */}
+      {sessionActive && lastRepStats && (
+        <div className="text-[10px] text-cyan-300 font-medium bg-cyan-950/80 border border-cyan-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+          <span>{lastRepStats.tempo === 'fast' ? '⚡' : lastRepStats.tempo === 'slow' ? '🐢' : '🎯'}</span>
+          <span>Темп: {lastRepStats.tempoLabel}</span>
+        </div>
+      )}
+
+      {/* Vibration & Speed Profile Hint */}
+      <div className="text-[9px] text-neutral-400 flex items-center gap-2">
+        <span>⚡ Скорость: ±{gestureManager.settings.speedTolerance}%</span>
+        <span>•</span>
+        <span>📳 Вибро: {gestureManager.settings.vibrationEnabled ? 'ВКЛ' : 'ВЫКЛ'}</span>
       </div>
 
       {/* Circular Progress Gauge */}

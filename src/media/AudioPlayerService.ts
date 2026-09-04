@@ -200,7 +200,17 @@ export class AudioPlayerService {
     }
   }
 
-  public triggerHaptic(durationMs = 45) {
+  public triggerHaptic(durationMs = 45, force = false) {
+    // Android Native Wear OS hardware vibration via bridge
+    if (typeof window !== 'undefined' && (window as any).AndroidBridge?.triggerHaptic) {
+      try {
+        (window as any).AndroidBridge.triggerHaptic(durationMs);
+      } catch {
+        // ignore
+      }
+    }
+
+    // Standard HTML5 Vibration API
     if ('vibrate' in navigator) {
       try {
         navigator.vibrate(durationMs);
@@ -208,8 +218,9 @@ export class AudioPlayerService {
         // ignore
       }
     }
-    // Web Audio haptic click tone
-    this.playHapticTone(durationMs > 80 ? 320 : 540, durationMs / 1000);
+
+    // Web Audio tactile auditory feedback click
+    this.playHapticTone(durationMs > 80 ? 320 : 540, Math.min(0.08, durationMs / 1000));
   }
 
   private playHapticTone(freq: number, duration: number) {

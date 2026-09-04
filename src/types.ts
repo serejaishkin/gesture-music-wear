@@ -12,8 +12,12 @@ export interface Settings {
   fistClenchEnabled: boolean; // default true
   minDuration: number; // in ms, default 160
   maxDuration: number; // in ms, default 600
-  gestureCooldown: number; // in ms, default 1200
+  gestureCooldown: number; // in ms, default 1000
   leftHand: boolean; // default false
+  vibrationEnabled: boolean; // default true
+  vibrationIntensity: 'light' | 'medium' | 'strong'; // default 'medium'
+  vibrationDuration: number; // in ms: 30, 60, 100
+  speedTolerance: number; // in %, default 40
 }
 
 export interface IMUSample {
@@ -36,6 +40,11 @@ export interface TrainedGesture {
     ay: number;
     az: number;
   }>;
+  averageDurationMs?: number; // Average execution duration in milliseconds
+  averageSpeed?: number; // Average angular/linear motion speed
+  minDurationMs?: number; // Speed tolerance lower bound
+  maxDurationMs?: number; // Speed tolerance upper bound
+  tempoLabel?: string; // e.g. "Нормальный (320 мс)"
 }
 
 export interface TrackInfo {

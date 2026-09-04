@@ -15,6 +15,10 @@ const DEFAULT_SETTINGS: Settings = {
   maxDuration: 600,
   gestureCooldown: 1000,
   leftHand: false,
+  vibrationEnabled: true,
+  vibrationIntensity: 'medium',
+  vibrationDuration: 60,
+  speedTolerance: 40,
 };
 
 const SETTINGS_KEY = 'gesture_music_settings';
@@ -174,12 +178,49 @@ export class GestureManager {
     this.notify();
   }
 
+  public updateVibrationEnabled(val: boolean) {
+    this.settings.vibrationEnabled = val;
+    this.notify();
+  }
+
+  public updateVibrationIntensity(val: 'light' | 'medium' | 'strong') {
+    this.settings.vibrationIntensity = val;
+    if (val === 'light') this.settings.vibrationDuration = 35;
+    else if (val === 'medium') this.settings.vibrationDuration = 65;
+    else if (val === 'strong') this.settings.vibrationDuration = 110;
+    this.triggerFeedback();
+    this.notify();
+  }
+
+  public updateVibrationDuration(val: number) {
+    this.settings.vibrationDuration = val;
+    this.triggerFeedback();
+    this.notify();
+  }
+
+  public updateSpeedTolerance(val: number) {
+    this.settings.speedTolerance = val;
+    this.trainer.setSpeedTolerance(val);
+    this.notify();
+  }
+
+  public triggerFeedback(durationOverride?: number) {
+    if (!this.settings.vibrationEnabled) return;
+    const dur = durationOverride ?? this.settings.vibrationDuration;
+    audioPlayer.triggerHaptic(dur);
+  }
+
+  public getLastRepetitionStats() {
+    return this.trainer.lastRepetitionStats;
+  }
+
   public setStrategyName(name: EngineStrategy) {
     this.strategyName = name;
     this.notify();
   }
 
   private updateDetectors() {
+    this.trainer.setSpeedTolerance(this.settings.speedTolerance);
     this.wristDetector.updateSettings(
       this.settings.angleThreshold,
       this.settings.gestureCooldown,
@@ -286,7 +327,7 @@ export class GestureManager {
       this.trainingRepetitions = this.trainer.getTrainingRepetitionCount();
 
       if (event === TrainingEvent.REPETITION_ACCEPTED) {
-        audioPlayer.triggerHaptic(45);
+        this.triggerFeedback(this.settings.vibrationDuration);
         if (this.trainingRepetitions >= this.trainer.getRequiredRepetitions()) {
           this.finishTrainingSession();
         }
@@ -308,7 +349,7 @@ export class GestureManager {
     if (learned === GestureType.ACTIVATE) {
       this.armingManager.activate(timestamp);
       this.lastGestureTime = timestamp;
-      audioPlayer.triggerHaptic(120);
+      this.triggerFeedback(this.settings.vibrationDuration * 2);
       this.dispatchGesture(learned);
       return;
     }
@@ -340,14 +381,14 @@ export class GestureManager {
     if (gesture === GestureType.ACTIVATE) {
       this.armingManager.activate(timestamp);
       this.lastGestureTime = timestamp;
-      audioPlayer.triggerHaptic(120);
+      this.triggerFeedback(this.settings.vibrationDuration * 2);
       this.dispatchGesture(gesture);
       return;
     }
 
     this.armingManager.touch(timestamp);
     this.lastGestureTime = timestamp;
-    audioPlayer.triggerHaptic(50);
+    this.triggerFeedback(this.settings.vibrationDuration);
 
     // Dispatch media controls
     if (gesture === GestureType.NEXT_TRACK) {
@@ -391,7 +432,7 @@ export class GestureManager {
     this.trainingDone = false;
     this.trainingSuccess = false;
     this.trainer.startTraining();
-    audioPlayer.triggerHaptic(45);
+    this.triggerFeedback(this.settings.vibrationDuration);
     this.notify();
   }
 
@@ -404,7 +445,7 @@ export class GestureManager {
     const success = this.trainer.saveTraining(type);
     this.trainingSuccess = success;
     if (success) {
-      audioPlayer.triggerHaptic(120);
+      this.triggerFeedback(this.settings.vibrationDuration * 2);
     }
     this.notify();
   }

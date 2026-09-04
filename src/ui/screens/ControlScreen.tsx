@@ -18,6 +18,10 @@ interface ControlScreenProps {
   maxDuration: number;
   gestureCooldown: number;
   leftHand: boolean;
+  vibrationEnabled: boolean;
+  vibrationIntensity: 'light' | 'medium' | 'strong';
+  vibrationDuration: number;
+  speedTolerance: number;
 }
 
 export const ControlScreen: React.FC<ControlScreenProps> = ({
@@ -36,6 +40,10 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
   maxDuration,
   gestureCooldown,
   leftHand,
+  vibrationEnabled,
+  vibrationIntensity,
+  vibrationDuration,
+  speedTolerance,
 }) => {
   return (
     <div className="w-full flex flex-col items-center gap-2 py-3 px-3 text-center">
@@ -164,6 +172,97 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
           onValueChange={(v) => gestureManager.updateGestureCooldown(Math.round(v))}
           formatValue={(v) => `${Math.round(v)}мс`}
         />
+
+        {/* Speed / Tempo Tolerance in Training and Detection */}
+        <SensitivitySlider
+          label="Допуск скорости (темп)"
+          value={speedTolerance}
+          min={15}
+          max={70}
+          step={5}
+          onValueChange={(v) => gestureManager.updateSpeedTolerance(Math.round(v))}
+          formatValue={(v) => `±${Math.round(v)}%`}
+        />
+
+        {/* Vibration Settings Section */}
+        <div className="w-full max-w-[210px] flex flex-col gap-1.5 pt-2 pb-1 border-t border-white/5 mt-1">
+          <div className="flex items-center justify-between py-0.5 px-2 text-xs">
+            <span className="text-neutral-300 text-[11px] flex items-center gap-1">
+              <span>📳</span> Вибрация:
+            </span>
+            <button
+              type="button"
+              onClick={() => gestureManager.updateVibrationEnabled(!vibrationEnabled)}
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border transition-all ${
+                vibrationEnabled
+                  ? 'bg-cyan-950 text-cyan-300 border-cyan-700'
+                  : 'bg-neutral-800 text-neutral-400 border-neutral-700'
+              }`}
+            >
+              {vibrationEnabled ? 'ВКЛ' : 'ВЫКЛ'}
+            </button>
+          </div>
+
+          {vibrationEnabled && (
+            <>
+              {/* Intensity Pills */}
+              <div className="grid grid-cols-3 gap-1 px-1">
+                <button
+                  type="button"
+                  onClick={() => gestureManager.updateVibrationIntensity('light')}
+                  className={`py-1 rounded-md text-[10px] font-medium border transition-all ${
+                    vibrationIntensity === 'light'
+                      ? 'bg-cyan-900/60 text-cyan-300 border-cyan-500'
+                      : 'bg-neutral-800 text-neutral-400 border-white/5'
+                  }`}
+                >
+                  Слабая
+                </button>
+                <button
+                  type="button"
+                  onClick={() => gestureManager.updateVibrationIntensity('medium')}
+                  className={`py-1 rounded-md text-[10px] font-medium border transition-all ${
+                    vibrationIntensity === 'medium'
+                      ? 'bg-cyan-900/60 text-cyan-300 border-cyan-500'
+                      : 'bg-neutral-800 text-neutral-400 border-white/5'
+                  }`}
+                >
+                  Средняя
+                </button>
+                <button
+                  type="button"
+                  onClick={() => gestureManager.updateVibrationIntensity('strong')}
+                  className={`py-1 rounded-md text-[10px] font-medium border transition-all ${
+                    vibrationIntensity === 'strong'
+                      ? 'bg-cyan-900/60 text-cyan-300 border-cyan-500'
+                      : 'bg-neutral-800 text-neutral-400 border-white/5'
+                  }`}
+                >
+                  Сильная
+                </button>
+              </div>
+
+              <SensitivitySlider
+                label="Длина импульса"
+                value={vibrationDuration}
+                min={20}
+                max={150}
+                step={5}
+                onValueChange={(v) => gestureManager.updateVibrationDuration(Math.round(v))}
+                formatValue={(v) => `${Math.round(v)}мс`}
+              />
+
+              <button
+                type="button"
+                onClick={() => gestureManager.triggerFeedback()}
+                className="w-full py-1 px-2 rounded-full text-[11px] font-medium bg-neutral-800 hover:bg-neutral-700 text-cyan-300 border border-cyan-500/20 active:scale-95 transition-all flex items-center justify-center gap-1 mt-0.5"
+              >
+                <span>📳</span>
+                <span>Тест вибрации</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Settings Persistence Controls */}

@@ -9,52 +9,76 @@ export interface Sample {
   az: number;
 }
 
+export interface RepetitionStats {
+  durationMs: number;
+  averageSpeed: number;
+  tempo: 'fast' | 'normal' | 'slow';
+  tempoLabel: string;
+}
+
 export enum TrainingEvent {
   NONE = 'NONE',
   STARTED = 'STARTED',
   REPETITION_ACCEPTED = 'REPETITION_ACCEPTED',
+  REPETITION_TOO_FAST = 'REPETITION_TOO_FAST',
+  REPETITION_TOO_SLOW = 'REPETITION_TOO_SLOW',
 }
 
 /**
- * Five-repetition gesture training with automatic motion start/end detection
- * and Dynamic Time Warping (DTW) matching.
- * Ported directly from GestureTrainer.kt
+ * Five-repetition gesture training with automatic motion start/end detection,
+ * execution speed/duration profiling, and Dynamic Time Warping (DTW) matching.
+ * Ported directly from GestureTrainer.kt with speed awareness.
  */
 export class GestureTrainer {
   private static readonly SAMPLE_SIZE = 90;
-  private static readonly MIN_SAMPLES = 18;
+  private static readonly MIN_SAMPLES = 14;
   private static readonly TRAINING_REPETITIONS = 5;
-  private static readonly DTW_THRESHOLD = 1.15;
-  private static readonly TRAINING_VARIANCE_THRESHOLD = 1.4;
-  private static readonly MIN_MOTION_ENERGY = 0.18;
-  private static readonly START_MOTION_THRESHOLD = 0.45;
-  private static readonly END_MOTION_THRESHOLD = 0.18;
+  private static readonly DTW_THRESHOLD = 1.20;
+  private static readonly TRAINING_VARIANCE_THRESHOLD = 1.45;
+  private static readonly MIN_MOTION_ENERGY = 0.16;
+  private static readonly START_MOTION_THRESHOLD = 0.42;
+  private static readonly END_MOTION_THRESHOLD = 0.16;
   private static readonly QUIET_SAMPLES_TO_END = 8;
-  private static readonly RECOGNITION_COOLDOWN_MS = 1200;
-  private static readonly EVALUATION_INTERVAL_MS = 100;
+  private static readonly RECOGNITION_COOLDOWN_MS = 1000;
+  private static readonly EVALUATION_INTERVAL_MS = 80;
   private static readonly STORAGE_KEY = 'gesture_music_trained_gestures';
 
   private trainingSession = false;
   private isRecording = false;
+  private recordingStartTime = 0;
   private currentRecording: Sample[] = [];
   private repetitions: Sample[][] = [];
+  private repetitionDurations: number[] = [];
+  private repetitionSpeeds: number[] = [];
   private quietSamples = 0;
   private previousSample: Sample | null = null;
   private trainedGestures: Map<GestureType, TrainedGesture> = new Map();
   private lastRecognitionTime = 0;
   private lastEvaluationTime = 0;
+  private candidateStartTime = 0;
+
+  public lastRepetitionStats: RepetitionStats | null = null;
+  public speedTolerancePercent = 40;
 
   constructor() {
     this.loadGestures();
   }
 
+  public setSpeedTolerance(tolerancePercent: number) {
+    this.speedTolerancePercent = Math.max(15, Math.min(80, tolerancePercent));
+  }
+
   public startTraining() {
     this.trainingSession = true;
     this.isRecording = false;
+    this.recordingStartTime = 0;
     this.currentRecording = [];
     this.repetitions = [];
+    this.repetitionDurations = [];
+    this.repetitionSpeeds = [];
     this.quietSamples = 0;
     this.previousSample = null;
+    this.lastRepetitionStats = null;
   }
 
   public startRecording() {
@@ -80,6 +104,7 @@ export class GestureTrainer {
     if (!this.isRecording) {
       if (delta >= GestureTrainer.START_MOTION_THRESHOLD) {
         this.isRecording = true;
+        this.recordingStartTime = performance.now();
         this.currentRecording = [sample];
         this.quietSamples = 0;
         return TrainingEvent.STARTED;
@@ -109,18 +134,38 @@ export class GestureTrainer {
 
   private finishAutoRepetition(): TrainingEvent {
     const sample = [...this.currentRecording];
+    const duration = Math.max(120, Math.round(performance.now() - this.recordingStartTime));
     this.currentRecording = [];
     this.isRecording = false;
     this.quietSamples = 0;
 
-    if (
-      sample.length < GestureTrainer.MIN_SAMPLES ||
-      this.motionEnergy(sample) < GestureTrainer.MIN_MOTION_ENERGY
-    ) {
+    const energy = this.motionEnergy(sample);
+    if (sample.length < GestureTrainer.MIN_SAMPLES || energy < GestureTrainer.MIN_MOTION_ENERGY) {
       return TrainingEvent.NONE;
     }
 
+    // Speed / Tempo categorization
+    let tempo: 'fast' | 'normal' | 'slow' = 'normal';
+    let tempoLabel = `🎯 ${duration} мс (Оптимально)`;
+    if (duration < 220) {
+      tempo = 'fast';
+      tempoLabel = `⚡ ${duration} мс (Быстрый темп)`;
+    } else if (duration > 650) {
+      tempo = 'slow';
+      tempoLabel = `🐢 ${duration} мс (Плавный темп)`;
+    }
+
+    this.lastRepetitionStats = {
+      durationMs: duration,
+      averageSpeed: Math.round(energy * 100) / 100,
+      tempo,
+      tempoLabel,
+    };
+
+    this.repetitionDurations.push(duration);
+    this.repetitionSpeeds.push(energy);
     this.repetitions.push(this.normalize(sample));
+
     return TrainingEvent.REPETITION_ACCEPTED;
   }
 
@@ -135,15 +180,42 @@ export class GestureTrainer {
       return false;
     }
 
+    const avgDuration = Math.round(
+      this.repetitionDurations.reduce((a, b) => a + b, 0) / this.repetitionDurations.length
+    );
+    const avgSpeed =
+      Math.round(
+        (this.repetitionSpeeds.reduce((a, b) => a + b, 0) / this.repetitionSpeeds.length) * 100
+      ) / 100;
+
+    const tolerance = this.speedTolerancePercent / 100;
+    const minDuration = Math.max(100, Math.round(avgDuration * (1 - tolerance)));
+    const maxDuration = Math.round(avgDuration * (1 + tolerance));
+
+    let tempoLabel = `Норма (${avgDuration} мс)`;
+    if (avgDuration < 240) {
+      tempoLabel = `Быстрый (${avgDuration} мс)`;
+    } else if (avgDuration > 600) {
+      tempoLabel = `Плавный (${avgDuration} мс)`;
+    }
+
     this.trainedGestures.set(gestureType, {
       gestureType,
       samples: template,
+      averageDurationMs: avgDuration,
+      averageSpeed: avgSpeed,
+      minDurationMs: minDuration,
+      maxDurationMs: maxDuration,
+      tempoLabel,
     });
+
     this.saveGestures();
     this.trainingSession = false;
     this.isRecording = false;
     this.currentRecording = [];
     this.repetitions = [];
+    this.repetitionDurations = [];
+    this.repetitionSpeeds = [];
     this.previousSample = null;
     return true;
   }
@@ -153,7 +225,10 @@ export class GestureTrainer {
     this.isRecording = false;
     this.currentRecording = [];
     this.repetitions = [];
+    this.repetitionDurations = [];
+    this.repetitionSpeeds = [];
     this.previousSample = null;
+    this.lastRepetitionStats = null;
   }
 
   public getTrainingRepetitionCount(): number {
@@ -185,6 +260,10 @@ export class GestureTrainer {
     const now = performance.now();
     if (now - this.lastRecognitionTime < GestureTrainer.RECOGNITION_COOLDOWN_MS) return null;
 
+    if (this.currentRecording.length === 0) {
+      this.candidateStartTime = now;
+    }
+
     this.currentRecording.push({ gx, gy, gz, ax, ay, az });
     if (this.currentRecording.length > GestureTrainer.SAMPLE_SIZE) {
       this.currentRecording.shift();
@@ -200,11 +279,23 @@ export class GestureTrainer {
       return null;
     }
 
+    const candidateDuration = Math.max(100, now - this.candidateStartTime);
     const candidate = this.normalize(this.currentRecording);
     let bestMatch: GestureType | null = null;
     let bestScore = Infinity;
 
     for (const [type, trained] of this.trainedGestures.entries()) {
+      // Check execution speed constraint if trained model has speed profile
+      if (trained.minDurationMs && trained.maxDurationMs) {
+        // Allow slight wiggle room on the bounds (±15%) before hard rejecting
+        const lowerBound = trained.minDurationMs * 0.85;
+        const upperBound = trained.maxDurationMs * 1.15;
+        if (candidateDuration < lowerBound || candidateDuration > upperBound) {
+          // Speed mismatch - gesture performed either too fast or too slow compared to training
+          continue;
+        }
+      }
+
       const score = this.dtwDistance(candidate, trained.samples);
       if (score < bestScore) {
         bestScore = score;
@@ -220,6 +311,7 @@ export class GestureTrainer {
 
     if (this.currentRecording.length >= GestureTrainer.SAMPLE_SIZE) {
       this.currentRecording.splice(0, Math.floor(GestureTrainer.SAMPLE_SIZE / 2));
+      this.candidateStartTime = performance.now();
     }
 
     return null;
