@@ -3,13 +3,15 @@ import { gestureManager } from './gesture/GestureManager';
 import { ControlScreen } from './ui/screens/ControlScreen';
 import { PlayerScreen } from './ui/screens/PlayerScreen';
 import { TrainingScreen } from './ui/screens/TrainingScreen';
-import { WatchFrame } from './ui/components/WatchFrame';
+import { QuickTileScreen } from './ui/screens/QuickTileScreen';
+import { WatchFrame, WatchScreenType } from './ui/components/WatchFrame';
 import { GestureSimulator } from './ui/components/GestureSimulator';
+import { QuickAccessTileCard } from './ui/components/QuickAccessTileCard';
 import { audioPlayer } from './media/AudioPlayerService';
 import { Watch, Music2, Radio, Info } from 'lucide-react';
 
 export function App() {
-  const [currentScreen, setCurrentScreen] = useState<'control' | 'player' | 'training'>('control');
+  const [currentScreen, setCurrentScreen] = useState<WatchScreenType>('tile');
   const [isRunning, setIsRunning] = useState(gestureManager.isRunning);
   const [strategyName, setStrategyName] = useState(gestureManager.strategyName);
   const [lastGesture, setLastGesture] = useState(gestureManager.lastGesture);
@@ -94,9 +96,23 @@ export function App() {
             <span>Galaxy Watch Display (396×396 Circular AMOLED)</span>
           </div>
 
-          <WatchFrame>
+          <WatchFrame
+            currentScreen={currentScreen}
+            onSelectScreen={setCurrentScreen}
+          >
+            {currentScreen === 'tile' && (
+              <QuickTileScreen
+                isRunning={isRunning}
+                leftHand={settings.leftHand}
+                lastGesture={lastGesture}
+                onOpenSettings={() => setCurrentScreen('control')}
+                onOpenPlayer={() => setCurrentScreen('player')}
+              />
+            )}
+
             {currentScreen === 'control' && (
               <ControlScreen
+                onOpenTile={() => setCurrentScreen('tile')}
                 onOpenPlayer={() => setCurrentScreen('player')}
                 onOpenTraining={() => setCurrentScreen('training')}
                 isRunning={isRunning}
@@ -105,6 +121,8 @@ export function App() {
                 saveMessage={saveMessage}
                 angleThreshold={settings.angleThreshold}
                 pinchThreshold={settings.pinchThreshold}
+                fistClenchThreshold={settings.fistClenchThreshold}
+                fistClenchEnabled={settings.fistClenchEnabled}
                 minDuration={settings.minDuration}
                 maxDuration={settings.maxDuration}
                 gestureCooldown={settings.gestureCooldown}
@@ -131,12 +149,22 @@ export function App() {
           </WatchFrame>
 
           <p className="text-[11px] text-neutral-500 mt-3 text-center">
-            Используйте колёсико мыши или свайп для прокрутки круглого экрана
+            Используйте точки сверху экрана или физические кнопки справа для быстрой смены экрана
           </p>
         </div>
 
-        {/* Right Column: Interactive Test Suite & Live Audio Monitor */}
+        {/* Right Column: Quick Access Tile & Interactive Test Suite */}
         <div className="lg:col-span-6 flex flex-col gap-4">
+          {/* Quick Access Tile Card */}
+          <QuickAccessTileCard
+            isRunning={isRunning}
+            leftHand={settings.leftHand}
+            lastGesture={lastGesture}
+            onOpenWatchTile={() => setCurrentScreen('tile')}
+            onOpenWatchControl={() => setCurrentScreen('control')}
+            onOpenWatchPlayer={() => setCurrentScreen('player')}
+          />
+
           {/* Active Audio Playback Card */}
           <div className="bg-neutral-900/80 border border-white/10 rounded-2xl p-4 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">

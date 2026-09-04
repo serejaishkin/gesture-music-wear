@@ -7,7 +7,9 @@ export enum GestureType {
 
 export interface Settings {
   angleThreshold: number; // in degrees, default 28
-  pinchThreshold: number; // in m/s^2, default 3.5
+  pinchThreshold: number; // in m/s^2, default 3.2
+  fistClenchThreshold: number; // in m/s^2, default 3.2
+  fistClenchEnabled: boolean; // default true
   minDuration: number; // in ms, default 160
   maxDuration: number; // in ms, default 600
   gestureCooldown: number; // in ms, default 1200

@@ -5,12 +5,15 @@ import { gestureManager } from '../../gesture/GestureManager';
 interface ControlScreenProps {
   onOpenPlayer: () => void;
   onOpenTraining: () => void;
+  onOpenTile?: () => void;
   isRunning: boolean;
   strategyName: string;
   lastGesture: string;
   saveMessage: string;
   angleThreshold: number;
   pinchThreshold: number;
+  fistClenchThreshold: number;
+  fistClenchEnabled: boolean;
   minDuration: number;
   maxDuration: number;
   gestureCooldown: number;
@@ -20,12 +23,15 @@ interface ControlScreenProps {
 export const ControlScreen: React.FC<ControlScreenProps> = ({
   onOpenPlayer,
   onOpenTraining,
+  onOpenTile,
   isRunning,
   strategyName,
   lastGesture,
   saveMessage,
   angleThreshold,
   pinchThreshold,
+  fistClenchThreshold,
+  fistClenchEnabled,
   minDuration,
   maxDuration,
   gestureCooldown,
@@ -95,14 +101,39 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
         />
 
         <SensitivitySlider
-          label="Щипок"
+          label="Щипок (аксель)"
           value={pinchThreshold}
-          min={2.0}
+          min={1.8}
           max={5.0}
           step={0.1}
           onValueChange={(v) => gestureManager.updatePinchThreshold(v)}
           formatValue={(v) => v.toFixed(1)}
         />
+
+        <SensitivitySlider
+          label="Сжатие в кулак"
+          value={fistClenchThreshold}
+          min={1.8}
+          max={5.5}
+          step={0.1}
+          onValueChange={(v) => gestureManager.updateFistClenchThreshold(v)}
+          formatValue={(v) => v.toFixed(1)}
+        />
+
+        <div className="w-full max-w-[210px] flex items-center justify-between py-1 px-2 text-xs">
+          <span className="text-neutral-300 text-[11px]">Жест сжатия кулака:</span>
+          <button
+            type="button"
+            onClick={() => gestureManager.updateFistClenchEnabled(!fistClenchEnabled)}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all ${
+              fistClenchEnabled
+                ? 'bg-cyan-950 text-cyan-300 border-cyan-700'
+                : 'bg-neutral-800 text-neutral-400 border-neutral-700'
+            }`}
+          >
+            {fistClenchEnabled ? 'ВКЛ' : 'ВЫКЛ'}
+          </button>
+        </div>
 
         <SensitivitySlider
           label="Мин. время"
@@ -127,8 +158,8 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
         <SensitivitySlider
           label="Пауза между жестами"
           value={gestureCooldown}
-          min={600}
-          max={2500}
+          min={500}
+          max={2000}
           step={50}
           onValueChange={(v) => gestureManager.updateGestureCooldown(Math.round(v))}
           formatValue={(v) => `${Math.round(v)}мс`}
@@ -156,6 +187,17 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
 
       {/* Screen Navigation */}
       <div className="w-full max-w-[210px] flex flex-col gap-1.5 pt-1">
+        {onOpenTile && (
+          <button
+            type="button"
+            onClick={onOpenTile}
+            className="w-full py-1.5 px-3 rounded-full text-xs font-semibold bg-neutral-800 hover:bg-neutral-700 text-cyan-300 border border-cyan-500/30 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-1.5"
+          >
+            <span>📱</span>
+            <span>Быстрая плитка (Tile)</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onOpenPlayer}
@@ -191,7 +233,8 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
         Поворот кисти вправо ➡️ next{'\n'}
         Поворот влево ⬅️ prev{'\n'}
         (для левой руки — наоборот){'\n'}
-        👌 двойной щипок: play/pause
+        👌 двойной щипок: play/pause{'\n'}
+        ✊ сжатие в кулак: play/pause
       </div>
     </div>
   );

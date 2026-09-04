@@ -1,16 +1,19 @@
 import { GestureType, Settings, EngineStrategy } from '../types';
 import { WristRotationDetector } from './WristRotationDetector';
 import { DoublePinchDetector } from './DoublePinchDetector';
+import { FistClenchDetector } from './FistClenchDetector';
 import { GestureTrainer, TrainingEvent } from './GestureTrainer';
 import { GestureArmingManager } from './GestureArmingManager';
 import { audioPlayer } from '../media/AudioPlayerService';
 
 const DEFAULT_SETTINGS: Settings = {
   angleThreshold: 28,
-  pinchThreshold: 3.5,
+  pinchThreshold: 3.2,
+  fistClenchThreshold: 3.2,
+  fistClenchEnabled: true,
   minDuration: 160,
   maxDuration: 600,
-  gestureCooldown: 1200,
+  gestureCooldown: 1000,
   leftHand: false,
 };
 
@@ -19,6 +22,7 @@ const SETTINGS_KEY = 'gesture_music_settings';
 export class GestureManager {
   private wristDetector: WristRotationDetector;
   private pinchDetector: DoublePinchDetector;
+  private fistDetector: FistClenchDetector;
   private trainer: GestureTrainer;
   private armingManager: GestureArmingManager;
 
@@ -28,6 +32,9 @@ export class GestureManager {
   public lastGestureRaw: GestureType | null = null;
   public strategyName: EngineStrategy = 'RawSensor (universal)';
   public saveMessage = '';
+
+  // Dynamic Gravity estimation for real hardware sensors
+  private gravity = { x: 0, y: 0, z: 9.8 };
 
   // Training state
   public isTrainingMode = false;
@@ -57,10 +64,14 @@ export class GestureManager {
     );
     this.pinchDetector = new DoublePinchDetector(
       this.settings.pinchThreshold,
-      -(this.settings.pinchThreshold * 0.8),
-      7.0,
-      2.5,
-      800,
+      -(this.settings.pinchThreshold * 0.6),
+      12.0,
+      5.5,
+      900,
+      this.settings.gestureCooldown
+    );
+    this.fistDetector = new FistClenchDetector(
+      this.settings.fistClenchThreshold,
       this.settings.gestureCooldown
     );
     this.trainer = new GestureTrainer();
@@ -124,6 +135,18 @@ export class GestureManager {
     this.notify();
   }
 
+  public updateFistClenchThreshold(val: number) {
+    this.settings.fistClenchThreshold = val;
+    this.updateDetectors();
+    this.notify();
+  }
+
+  public updateFistClenchEnabled(val: boolean) {
+    this.settings.fistClenchEnabled = val;
+    this.updateDetectors();
+    this.notify();
+  }
+
   public updateMinDuration(val: number) {
     this.settings.minDuration = val;
     this.updateDetectors();
@@ -165,6 +188,10 @@ export class GestureManager {
       this.settings.pinchThreshold,
       this.settings.gestureCooldown
     );
+    this.fistDetector.updateSettings(
+      this.settings.fistClenchThreshold,
+      this.settings.gestureCooldown
+    );
   }
 
   public startService() {
@@ -181,6 +208,7 @@ export class GestureManager {
     this.removeHardwareSensors();
     this.wristDetector.reset();
     this.pinchDetector.reset();
+    this.fistDetector.reset();
     this.armingManager.deactivate();
     this.notify();
   }
@@ -190,18 +218,42 @@ export class GestureManager {
 
     this.motionListener = (event: DeviceMotionEvent) => {
       const rot = event.rotationRate;
-      const acc = event.acceleration || event.accelerationIncludingGravity;
+      const rawAcc = event.accelerationIncludingGravity || event.acceleration;
 
-      if (!rot || !acc) return;
+      if (!rot || !rawAcc) return;
 
       // Web rotation rate is degrees/s; convert to radians/s for IMU matching
       const gx = ((rot.alpha || 0) * Math.PI) / 180;
       const gy = ((rot.beta || 0) * Math.PI) / 180;
       const gz = ((rot.gamma || 0) * Math.PI) / 180;
 
-      const ax = acc.x || 0;
-      const ay = acc.y || 0;
-      const az = acc.z || 0;
+      let ax = 0;
+      let ay = 0;
+      let az = 0;
+
+      // If true linear acceleration is given by browser:
+      if (
+        event.acceleration &&
+        (event.acceleration.x !== null || event.acceleration.y !== null || event.acceleration.z !== null)
+      ) {
+        ax = event.acceleration.x || 0;
+        ay = event.acceleration.y || 0;
+        az = event.acceleration.z || 0;
+      } else {
+        // High-pass filter to isolate linear acceleration from constant 1G gravity
+        const rx = rawAcc.x || 0;
+        const ry = rawAcc.y || 0;
+        const rz = rawAcc.z || 0;
+
+        const alpha = 0.85;
+        this.gravity.x = alpha * this.gravity.x + (1 - alpha) * rx;
+        this.gravity.y = alpha * this.gravity.y + (1 - alpha) * ry;
+        this.gravity.z = alpha * this.gravity.z + (1 - alpha) * rz;
+
+        ax = rx - this.gravity.x;
+        ay = ry - this.gravity.y;
+        az = rz - this.gravity.z;
+      }
 
       this.processSample(performance.now(), gx, gy, gz, ax, ay, az);
     };
@@ -242,9 +294,6 @@ export class GestureManager {
 
     if (!this.isRunning) return;
 
-    // Cooldown gate
-    if (timestamp - this.lastGestureTime < 400) return;
-
     this.armingManager.update(timestamp);
 
     // 1. Check learned DTW gestures first
@@ -262,13 +311,17 @@ export class GestureManager {
         ? null
         : learned;
 
-    let gesture = effectiveLearned;
+    let gesture: GestureType | null = effectiveLearned;
 
     // 2. Fall back to heuristic detectors
     if (!gesture) {
       const wrist = this.wristDetector.process(timestamp, gx, gy, gz, ax, ay, az);
       const pinch = this.pinchDetector.process(timestamp, gx, gy, gz, ax, ay, az);
-      gesture = wrist || pinch;
+      const fist = this.settings.fistClenchEnabled
+        ? this.fistDetector.process(timestamp, gx, gy, gz, ax, ay, az)
+        : null;
+
+      gesture = wrist || pinch || fist;
     }
 
     if (gesture) {
@@ -276,19 +329,18 @@ export class GestureManager {
     }
   }
 
-  private handleDetectedGesture(gesture: GestureType, timestamp: Long | number) {
-    const numTs = Number(timestamp);
+  private handleDetectedGesture(gesture: GestureType, timestamp: number) {
     if (gesture === GestureType.ACTIVATE) {
-      this.armingManager.activate(numTs);
-      this.lastGestureTime = numTs;
+      this.armingManager.activate(timestamp);
+      this.lastGestureTime = timestamp;
       audioPlayer.triggerHaptic(120);
       this.dispatchGesture(gesture);
       return;
     }
 
-    this.armingManager.touch(numTs);
-    this.lastGestureTime = numTs;
-    audioPlayer.triggerHaptic(45);
+    this.armingManager.touch(timestamp);
+    this.lastGestureTime = timestamp;
+    audioPlayer.triggerHaptic(50);
 
     // Dispatch media controls
     if (gesture === GestureType.NEXT_TRACK) {

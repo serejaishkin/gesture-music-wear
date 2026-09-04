@@ -9,6 +9,7 @@ interface GestureSimulatorProps {
 
 export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, leftHand }) => {
   const [isSimulating, setIsSimulating] = useState(false);
+  const [activeGestureNote, setActiveGestureNote] = useState('');
   const [liveSensors, setLiveSensors] = useState({
     gyroX: 0,
     gyroY: 0,
@@ -18,63 +19,20 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
     linAccZ: 0,
   });
 
-  // Emulate physical wrist rotation right
+  const showNote = (msg: string) => {
+    setActiveGestureNote(msg);
+    setTimeout(() => setActiveGestureNote(''), 1800);
+  };
+
+  // 1. Emulate physical wrist rotation right
   const simulateRotateRight = () => {
     if (isSimulating) return;
     setIsSimulating(true);
-
-    const startTime = performance.now();
-    const duration = 240; // ms
-    const direction = leftHand ? 1 : -1; // -2.8 rad/s creates negative angle in gyroX for right hand
-    let step = 0;
-
-    const interval = setInterval(() => {
-      const elapsed = performance.now() - startTime;
-      if (elapsed > duration) {
-        clearInterval(interval);
-        // Settle back to quiet
-        gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
-        setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
-        setIsSimulating(false);
-        return;
-      }
-
-      step++;
-      const progress = elapsed / duration;
-      const bell = Math.sin(progress * Math.PI); // peak in the middle
-      const gx = direction * bell * 3.2; // 3.2 rad/s angular speed
-      const linAccY = (Math.random() - 0.5) * 4;
-
-      setLiveSensors({
-        gyroX: Number(gx.toFixed(2)),
-        gyroY: 0,
-        gyroZ: 0,
-        linAccX: 0,
-        linAccY: Number(linAccY.toFixed(2)),
-        linAccZ: 0,
-      });
-
-      gestureManager.processSample(
-        performance.now(),
-        gx,
-        0,
-        0,
-        0,
-        linAccY,
-        0
-      );
-    }, 20);
-  };
-
-  // Emulate physical wrist rotation left
-  const simulateRotateLeft = () => {
-    if (isSimulating) return;
-    setIsSimulating(true);
+    showNote('Поворот кисти вправо...');
 
     const startTime = performance.now();
     const duration = 240;
-    const direction = leftHand ? -1 : 1; // +3.2 rad/s
-    let step = 0;
+    const direction = leftHand ? 1 : -1;
 
     const interval = setInterval(() => {
       const elapsed = performance.now() - startTime;
@@ -86,11 +44,10 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
         return;
       }
 
-      step++;
       const progress = elapsed / duration;
       const bell = Math.sin(progress * Math.PI);
-      const gx = direction * bell * 3.2;
-      const linAccY = (Math.random() - 0.5) * 4;
+      const gx = direction * bell * 3.4; // 3.4 rad/s
+      const linAccY = (Math.random() - 0.5) * 3;
 
       setLiveSensors({
         gyroX: Number(gx.toFixed(2)),
@@ -101,57 +58,135 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
         linAccZ: 0,
       });
 
-      gestureManager.processSample(
-        performance.now(),
-        gx,
-        0,
-        0,
-        0,
-        linAccY,
-        0
-      );
+      gestureManager.processSample(performance.now(), gx, 0, 0, 0, linAccY, 0);
     }, 20);
   };
 
-  // Emulate physical double pinch
+  // 2. Emulate physical wrist rotation left
+  const simulateRotateLeft = () => {
+    if (isSimulating) return;
+    setIsSimulating(true);
+    showNote('Поворот кисти влево...');
+
+    const startTime = performance.now();
+    const duration = 240;
+    const direction = leftHand ? -1 : 1;
+
+    const interval = setInterval(() => {
+      const elapsed = performance.now() - startTime;
+      if (elapsed > duration) {
+        clearInterval(interval);
+        gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
+        setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
+        setIsSimulating(false);
+        return;
+      }
+
+      const progress = elapsed / duration;
+      const bell = Math.sin(progress * Math.PI);
+      const gx = direction * bell * 3.4;
+      const linAccY = (Math.random() - 0.5) * 3;
+
+      setLiveSensors({
+        gyroX: Number(gx.toFixed(2)),
+        gyroY: 0,
+        gyroZ: 0,
+        linAccX: 0,
+        linAccY: Number(linAccY.toFixed(2)),
+        linAccZ: 0,
+      });
+
+      gestureManager.processSample(performance.now(), gx, 0, 0, 0, linAccY, 0);
+    }, 20);
+  };
+
+  // 3. Emulate physical double pinch (👌👌)
   const simulateDoublePinch = () => {
     if (isSimulating) return;
     setIsSimulating(true);
+    showNote('Двойной щипок пальцами...');
 
-    const emitPinch = (callback: () => void) => {
-      // 1. Z acceleration UP spike (4.2 m/s^2), quiet gyro
-      gestureManager.processSample(performance.now(), 0.1, 0.1, 0.1, 0.3, 0.4, 4.2);
-      setLiveSensors({ gyroX: 0.1, gyroY: 0.1, gyroZ: 0.1, linAccX: 0.3, linAccY: 0.4, linAccZ: 4.2 });
-
-      setTimeout(() => {
-        // 2. Z acceleration DOWN rebound (-3.1 m/s^2)
-        gestureManager.processSample(performance.now(), 0.05, 0.05, 0.05, 0.2, 0.2, -3.1);
-        setLiveSensors({ gyroX: 0.05, gyroY: 0.05, gyroZ: 0.05, linAccX: 0.2, linAccY: 0.2, linAccZ: -3.1 });
-
-        setTimeout(() => {
-          // 3. Calm
+    const emitPinchCycle = (callback: () => void) => {
+      let t = 0;
+      const pinchInterval = setInterval(() => {
+        t += 20;
+        if (t <= 50) {
+          // Sharp upward Z spike + minor lateral impulse
+          const az = 4.6;
+          gestureManager.processSample(performance.now(), 0.05, 0.05, 0.05, 0.3, 0.4, az);
+          setLiveSensors({ gyroX: 0.05, gyroY: 0.05, gyroZ: 0.05, linAccX: 0.3, linAccY: 0.4, linAccZ: az });
+        } else if (t <= 110) {
+          // Rebound down
+          const az = -2.6;
+          gestureManager.processSample(performance.now(), 0.02, 0.02, 0.02, 0.1, 0.1, az);
+          setLiveSensors({ gyroX: 0.02, gyroY: 0.02, gyroZ: 0.02, linAccX: 0.1, linAccY: 0.1, linAccZ: az });
+        } else {
+          clearInterval(pinchInterval);
           gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
           setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
           callback();
-        }, 60);
-      }, 50);
+        }
+      }, 20);
     };
 
     // First pinch
-    emitPinch(() => {
+    emitPinchCycle(() => {
+      // Natural gap between pinches (180ms)
       setTimeout(() => {
-        // Second pinch within window
-        emitPinch(() => {
+        // Second pinch
+        emitPinchCycle(() => {
           setIsSimulating(false);
         });
       }, 160);
     });
   };
 
-  // Emulate activation gesture
+  // 4. Emulate physical fist clench (✊✊ Двойное сжатие в кулак)
+  const simulateFistClench = () => {
+    if (isSimulating) return;
+    setIsSimulating(true);
+    showNote('Двойное сжатие в кулак...');
+
+    const emitClenchImpulse = (callback: () => void) => {
+      let t = 0;
+      const clenchInterval = setInterval(() => {
+        t += 20;
+        if (t <= 60) {
+          // Micro-shockwave across multiple axes (high jerk, low gyro)
+          const ax = 2.4;
+          const ay = 2.8;
+          const az = 3.5;
+          gestureManager.processSample(performance.now(), 0.1, 0.1, 0.1, ax, ay, az);
+          setLiveSensors({ gyroX: 0.1, gyroY: 0.1, gyroZ: 0.1, linAccX: ax, linAccY: ay, linAccZ: az });
+        } else if (t <= 120) {
+          // Relaxation
+          gestureManager.processSample(performance.now(), 0.05, 0.05, 0.05, 0.4, 0.4, 0.6);
+          setLiveSensors({ gyroX: 0.05, gyroY: 0.05, gyroZ: 0.05, linAccX: 0.4, linAccY: 0.4, linAccZ: 0.6 });
+        } else {
+          clearInterval(clenchInterval);
+          gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
+          setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
+          callback();
+        }
+      }, 20);
+    };
+
+    // First clench
+    emitClenchImpulse(() => {
+      setTimeout(() => {
+        // Second clench within 180ms
+        emitClenchImpulse(() => {
+          setIsSimulating(false);
+        });
+      }, 180);
+    });
+  };
+
+  // 5. Emulate activation gesture
   const simulateActivate = () => {
     if (isSimulating) return;
     setIsSimulating(true);
+    showNote('Жест активации...');
 
     const startTime = performance.now();
     const duration = 300;
@@ -202,9 +237,16 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
         </span>
       </div>
 
-      <p className="text-[11px] text-neutral-400 mt-2.5 leading-relaxed">
-        Тестируйте алгоритмы распознавания в браузере (WristRotationDetector, DoublePinchDetector, DTW):
-      </p>
+      <div className="flex items-center justify-between mt-2.5">
+        <p className="text-[11px] text-neutral-400 leading-relaxed">
+          Тестируйте алгоритмы распознавания в реальном времени:
+        </p>
+        {activeGestureNote && (
+          <span className="text-[10px] font-semibold text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30 animate-fade-in">
+            {activeGestureNote}
+          </span>
+        )}
+      </div>
 
       {/* Simulator Buttons */}
       <div className="grid grid-cols-2 gap-2 mt-3">
@@ -243,13 +285,26 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
 
         <button
           type="button"
-          onClick={simulateActivate}
+          onClick={simulateFistClench}
           disabled={isSimulating}
           className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-neutral-800/90 hover:bg-neutral-700/90 active:scale-95 border border-white/5 transition-all text-center group disabled:opacity-50"
         >
-          <span className="text-base mb-1 group-hover:rotate-12 transition-transform">🔓</span>
-          <span className="text-xs font-medium text-neutral-100">Активация</span>
-          <span className="text-[9px] text-cyan-400">Arm Guard (15s)</span>
+          <span className="text-base mb-1 group-hover:scale-110 transition-transform">✊✊</span>
+          <span className="text-xs font-medium text-neutral-100">Сжатие в кулак</span>
+          <span className="text-[9px] text-cyan-400">Play / Pause</span>
+        </button>
+      </div>
+
+      <div className="mt-2">
+        <button
+          type="button"
+          onClick={simulateActivate}
+          disabled={isSimulating}
+          className="w-full flex items-center justify-center gap-2 p-2 rounded-xl bg-neutral-800/70 hover:bg-neutral-700/70 active:scale-95 border border-white/5 transition-all text-center group disabled:opacity-50"
+        >
+          <span className="text-sm group-hover:rotate-12 transition-transform">🔓</span>
+          <span className="text-xs font-medium text-neutral-200">Жест активации</span>
+          <span className="text-[9px] text-cyan-400">(Arm Guard 15s)</span>
         </button>
       </div>
 

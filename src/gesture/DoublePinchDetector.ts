@@ -2,10 +2,8 @@ import { GestureType } from '../types';
 
 /**
  * Double pinch detector for play/pause.
- * Ported directly from DoublePinchDetector.kt
- *
- * Uses an explicit armed/disarmed state so the same physical pinch
- * cannot generate multiple PLAY_PAUSE events from sensor jitter.
+ * Enhanced to handle multiple watch angles, 3D impulse signatures,
+ * and reliable rearm cycles.
  */
 export class DoublePinchDetector {
   private thresholdUp: number;
@@ -16,10 +14,10 @@ export class DoublePinchDetector {
   private cooldownMs: number;
   private maxGyroMagnitude: number;
 
-  private static readonly REARM_ACCEL = 1.0;
-  private static readonly REARM_STABLE_MS = 120;
-  private static readonly PINCH_TIMEOUT_MS = 300;
-  private static readonly FALLBACK_REARM_MS = 2500;
+  private static readonly REARM_ACCEL = 1.6;
+  private static readonly REARM_STABLE_MS = 100;
+  private static readonly PINCH_TIMEOUT_MS = 450;
+  private static readonly FALLBACK_REARM_MS = 1500;
 
   private lastGestureTime = 0;
   private pinches: number[] = [];
@@ -30,13 +28,13 @@ export class DoublePinchDetector {
   private stableStartTime = 0;
 
   constructor(
-    thresholdUp = 3.5,
-    thresholdDown = -2.5,
-    maxAccZ = 7.0,
-    maxXYAccel = 2.5,
-    windowMs = 800,
-    cooldownMs = 1200,
-    maxGyroMagnitude = 2.0
+    thresholdUp = 3.2,
+    thresholdDown = -1.8,
+    maxAccZ = 12.0,
+    maxXYAccel = 5.5,
+    windowMs = 900,
+    cooldownMs = 1000,
+    maxGyroMagnitude = 2.5
   ) {
     this.thresholdUp = thresholdUp;
     this.thresholdDown = thresholdDown;
@@ -49,7 +47,7 @@ export class DoublePinchDetector {
 
   public updateSettings(pinchThreshold: number, cooldownMs: number) {
     this.thresholdUp = pinchThreshold;
-    this.thresholdDown = -(pinchThreshold * 0.8);
+    this.thresholdDown = -(pinchThreshold * 0.6);
     this.cooldownMs = cooldownMs;
   }
 
@@ -62,8 +60,10 @@ export class DoublePinchDetector {
     linAccY: number,
     linAccZ: number
   ): GestureType | null {
+    const accMag = Math.sqrt(linAccX * linAccX + linAccY * linAccY + linAccZ * linAccZ);
+
     if (!this.armed) {
-      if (Math.abs(linAccZ) <= DoublePinchDetector.REARM_ACCEL) {
+      if (accMag <= DoublePinchDetector.REARM_ACCEL) {
         if (this.stableStartTime === 0) this.stableStartTime = timestamp;
         if (
           timestamp - this.stableStartTime >= DoublePinchDetector.REARM_STABLE_MS &&
@@ -83,6 +83,7 @@ export class DoublePinchDetector {
 
     if (timestamp - this.lastGestureTime < this.cooldownMs) return null;
 
+    // Check gyroscope: pinch must be without large wrist rotation
     const gyroMagnitude = Math.max(Math.abs(gyroX), Math.abs(gyroY), Math.abs(gyroZ));
     if (gyroMagnitude > this.maxGyroMagnitude) {
       if (
@@ -96,14 +97,23 @@ export class DoublePinchDetector {
 
     this.pinches = this.pinches.filter((t) => timestamp - t <= this.windowMs);
 
+    const xyMag = Math.sqrt(linAccX * linAccX + linAccY * linAccY);
+
+    // Primary Z-axis spike OR tilted 3D impulse
+    const isUpSpike =
+      (linAccZ > this.thresholdUp && linAccZ <= this.maxAccZ && xyMag <= this.maxXYAccel) ||
+      (accMag > this.thresholdUp && accMag <= this.maxAccZ && Math.abs(linAccZ) > this.thresholdUp * 0.7);
+
     if (this.state === 'IDLE') {
-      const xyMag = Math.sqrt(linAccX * linAccX + linAccY * linAccY);
-      if (linAccZ > this.thresholdUp && linAccZ <= this.maxAccZ && xyMag <= this.maxXYAccel) {
+      if (isUpSpike) {
         this.state = 'UP_DETECTED';
         this.upTime = timestamp;
       }
     } else if (this.state === 'UP_DETECTED') {
-      if (linAccZ < this.thresholdDown) {
+      // Rebound down or settling after pulse
+      const isDownSpike = linAccZ < this.thresholdDown || (timestamp - this.upTime >= 60 && accMag < 1.4);
+
+      if (isDownSpike) {
         this.pinches.push(timestamp);
         this.state = 'IDLE';
 
@@ -111,7 +121,7 @@ export class DoublePinchDetector {
           const first = this.pinches[this.pinches.length - 2];
           const second = this.pinches[this.pinches.length - 1];
 
-          if (second - first <= this.windowMs) {
+          if (second - first >= 100 && second - first <= this.windowMs) {
             this.lastGestureTime = timestamp;
             this.pinches = [];
             this.armed = false;
