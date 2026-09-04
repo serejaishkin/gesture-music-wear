@@ -33,8 +33,11 @@ export class GestureManager {
   public strategyName: EngineStrategy = 'RawSensor (universal)';
   public saveMessage = '';
 
-  // Dynamic Gravity estimation for real hardware sensors
-  private gravity = { x: 0, y: 0, z: 9.8 };
+  // Dynamic Gravity estimation for real hardware sensors (scalar primitives for zero-allocation performance)
+  private gravX = 0;
+  private gravY = 0;
+  private gravZ = 9.8;
+  private lastTrainingNotifyTime = 0;
 
   // Training state
   public isTrainingMode = false;
@@ -246,13 +249,13 @@ export class GestureManager {
         const rz = rawAcc.z || 0;
 
         const alpha = 0.85;
-        this.gravity.x = alpha * this.gravity.x + (1 - alpha) * rx;
-        this.gravity.y = alpha * this.gravity.y + (1 - alpha) * ry;
-        this.gravity.z = alpha * this.gravity.z + (1 - alpha) * rz;
+        this.gravX = alpha * this.gravX + (1 - alpha) * rx;
+        this.gravY = alpha * this.gravY + (1 - alpha) * ry;
+        this.gravZ = alpha * this.gravZ + (1 - alpha) * rz;
 
-        ax = rx - this.gravity.x;
-        ay = ry - this.gravity.y;
-        az = rz - this.gravity.z;
+        ax = rx - this.gravX;
+        ay = ry - this.gravY;
+        az = rz - this.gravZ;
       }
 
       this.processSample(performance.now(), gx, gy, gz, ax, ay, az);
@@ -287,8 +290,12 @@ export class GestureManager {
         if (this.trainingRepetitions >= this.trainer.getRequiredRepetitions()) {
           this.finishTrainingSession();
         }
+        this.notify();
+      } else if (timestamp - this.lastTrainingNotifyTime > 50) {
+        // Throttle UI notification to smooth 20 FPS during sensor sampling
+        this.lastTrainingNotifyTime = timestamp;
+        this.notify();
       }
-      this.notify();
       return;
     }
 

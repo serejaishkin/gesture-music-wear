@@ -68,8 +68,10 @@ export class FistClenchDetector {
     this.prevAccMag = currentMag;
     this.prevTimestamp = timestamp;
 
-    // Remove expired clenches
-    this.clenches = this.clenches.filter((t) => timestamp - t <= this.windowMs);
+    // Remove expired clenches only if array has items
+    if (this.clenches.length > 0) {
+      this.clenches = this.clenches.filter((t) => timestamp - t <= this.windowMs);
+    }
 
     // Sudden muscle impulse (acc magnitude spike OR high jerk with low rotation)
     const isImpulse = currentMag >= this.clenchThreshold || jerk >= this.clenchThreshold * 18;

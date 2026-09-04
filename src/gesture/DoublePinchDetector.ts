@@ -95,7 +95,9 @@ export class DoublePinchDetector {
       return null;
     }
 
-    this.pinches = this.pinches.filter((t) => timestamp - t <= this.windowMs);
+    if (this.pinches.length > 0) {
+      this.pinches = this.pinches.filter((t) => timestamp - t <= this.windowMs);
+    }
 
     const xyMag = Math.sqrt(linAccX * linAccX + linAccY * linAccY);
 

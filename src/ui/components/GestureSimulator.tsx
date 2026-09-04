@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { gestureManager } from '../../gesture/GestureManager';
 import { EngineStrategy } from '../../types';
 
@@ -18,6 +18,32 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
     linAccY: 0,
     linAccZ: 0,
   });
+
+  const lastDisplayTimeRef = useRef(0);
+
+  // Smoothly throttled UI sensor update (16 FPS UI refresh while physical sensor loop stays 50Hz)
+  const updateSensorsUI = (
+    gx: number,
+    gy: number,
+    gz: number,
+    ax: number,
+    ay: number,
+    az: number,
+    force = false
+  ) => {
+    const now = performance.now();
+    if (force || now - lastDisplayTimeRef.current >= 60) {
+      lastDisplayTimeRef.current = now;
+      setLiveSensors({
+        gyroX: Number(gx.toFixed(2)),
+        gyroY: Number(gy.toFixed(2)),
+        gyroZ: Number(gz.toFixed(2)),
+        linAccX: Number(ax.toFixed(2)),
+        linAccY: Number(ay.toFixed(2)),
+        linAccZ: Number(az.toFixed(2)),
+      });
+    }
+  };
 
   const showNote = (msg: string) => {
     setActiveGestureNote(msg);
@@ -39,7 +65,7 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
       if (elapsed > duration) {
         clearInterval(interval);
         gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
-        setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
+        updateSensorsUI(0, 0, 0, 0, 0, 0, true);
         setIsSimulating(false);
         return;
       }
@@ -49,15 +75,7 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
       const gx = direction * bell * 3.4; // 3.4 rad/s
       const linAccY = (Math.random() - 0.5) * 3;
 
-      setLiveSensors({
-        gyroX: Number(gx.toFixed(2)),
-        gyroY: 0,
-        gyroZ: 0,
-        linAccX: 0,
-        linAccY: Number(linAccY.toFixed(2)),
-        linAccZ: 0,
-      });
-
+      updateSensorsUI(gx, 0, 0, 0, linAccY, 0);
       gestureManager.processSample(performance.now(), gx, 0, 0, 0, linAccY, 0);
     }, 20);
   };
@@ -77,7 +95,7 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
       if (elapsed > duration) {
         clearInterval(interval);
         gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
-        setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
+        updateSensorsUI(0, 0, 0, 0, 0, 0, true);
         setIsSimulating(false);
         return;
       }
@@ -87,15 +105,7 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
       const gx = direction * bell * 3.4;
       const linAccY = (Math.random() - 0.5) * 3;
 
-      setLiveSensors({
-        gyroX: Number(gx.toFixed(2)),
-        gyroY: 0,
-        gyroZ: 0,
-        linAccX: 0,
-        linAccY: Number(linAccY.toFixed(2)),
-        linAccZ: 0,
-      });
-
+      updateSensorsUI(gx, 0, 0, 0, linAccY, 0);
       gestureManager.processSample(performance.now(), gx, 0, 0, 0, linAccY, 0);
     }, 20);
   };
@@ -114,16 +124,16 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
           // Sharp upward Z spike + minor lateral impulse
           const az = 4.6;
           gestureManager.processSample(performance.now(), 0.05, 0.05, 0.05, 0.3, 0.4, az);
-          setLiveSensors({ gyroX: 0.05, gyroY: 0.05, gyroZ: 0.05, linAccX: 0.3, linAccY: 0.4, linAccZ: az });
+          updateSensorsUI(0.05, 0.05, 0.05, 0.3, 0.4, az);
         } else if (t <= 110) {
           // Rebound down
           const az = -2.6;
           gestureManager.processSample(performance.now(), 0.02, 0.02, 0.02, 0.1, 0.1, az);
-          setLiveSensors({ gyroX: 0.02, gyroY: 0.02, gyroZ: 0.02, linAccX: 0.1, linAccY: 0.1, linAccZ: az });
+          updateSensorsUI(0.02, 0.02, 0.02, 0.1, 0.1, az);
         } else {
           clearInterval(pinchInterval);
           gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
-          setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
+          updateSensorsUI(0, 0, 0, 0, 0, 0, true);
           callback();
         }
       }, 20);
@@ -157,15 +167,15 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
           const ay = 2.8;
           const az = 3.5;
           gestureManager.processSample(performance.now(), 0.1, 0.1, 0.1, ax, ay, az);
-          setLiveSensors({ gyroX: 0.1, gyroY: 0.1, gyroZ: 0.1, linAccX: ax, linAccY: ay, linAccZ: az });
+          updateSensorsUI(0.1, 0.1, 0.1, ax, ay, az);
         } else if (t <= 120) {
           // Relaxation
           gestureManager.processSample(performance.now(), 0.05, 0.05, 0.05, 0.4, 0.4, 0.6);
-          setLiveSensors({ gyroX: 0.05, gyroY: 0.05, gyroZ: 0.05, linAccX: 0.4, linAccY: 0.4, linAccZ: 0.6 });
+          updateSensorsUI(0.05, 0.05, 0.05, 0.4, 0.4, 0.6);
         } else {
           clearInterval(clenchInterval);
           gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
-          setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
+          updateSensorsUI(0, 0, 0, 0, 0, 0, true);
           callback();
         }
       }, 20);
@@ -196,7 +206,7 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
       if (elapsed > duration) {
         clearInterval(interval);
         gestureManager.processSample(performance.now(), 0, 0, 0, 0, 0, 0);
-        setLiveSensors({ gyroX: 0, gyroY: 0, gyroZ: 0, linAccX: 0, linAccY: 0, linAccZ: 0 });
+        updateSensorsUI(0, 0, 0, 0, 0, 0, true);
         setIsSimulating(false);
         return;
       }
@@ -206,15 +216,7 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
       const gz = bell * 2.8;
       const ax = bell * 2.2;
 
-      setLiveSensors({
-        gyroX: 0.2,
-        gyroY: 0.2,
-        gyroZ: Number(gz.toFixed(2)),
-        linAccX: Number(ax.toFixed(2)),
-        linAccY: 0.3,
-        linAccZ: 0.5,
-      });
-
+      updateSensorsUI(0.2, 0.2, gz, ax, 0.3, 0.5);
       gestureManager.processSample(performance.now(), 0.2, 0.2, gz, ax, 0.3, 0.5);
     }, 25);
   };

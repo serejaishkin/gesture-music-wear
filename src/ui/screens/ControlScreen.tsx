@@ -213,6 +213,14 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
         >
           🎓 Обучение
         </button>
+
+        <a
+          href="/gesture-music-wear.apk"
+          download="gesture-music-wear.apk"
+          className="w-full py-1.5 px-3 rounded-full text-xs font-medium bg-emerald-700 hover:bg-emerald-600 text-white flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
+        >
+          📥 Скачать APK (Wear OS)
+        </a>
       </div>
 
       {/* Toast Feedback */}
