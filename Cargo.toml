@@ -1,6 +1,0 @@
-[lib]
-path = "src/lib.rs"
-
-[[bin]]
-name = "hyperx-ngenuity-open"
-path = "src/main.rs"

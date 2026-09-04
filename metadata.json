@@ -1,0 +1,8 @@
+{
+  "name": "Gesture Music Wear",
+  "description": "Wear OS gesture music controller recreated in React, featuring wrist rotation and double-pinch detection, gesture training mode, sensitivity tuning, and audio player controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
