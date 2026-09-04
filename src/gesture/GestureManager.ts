@@ -258,6 +258,23 @@ export class GestureManager {
   }
 
   private setupHardwareSensors() {
+    // 1. Check for native Android bridge sensors (Wear OS Galaxy Watch 4)
+    if (typeof window !== 'undefined') {
+      const w = window as any;
+      w.onAndroidSensorData = (gx: number, gy: number, gz: number, ax: number, ay: number, az: number) => {
+        if (this.isRunning) {
+          this.processSample(performance.now(), gx, gy, gz, ax, ay, az);
+        }
+      };
+      if (w.AndroidBridge && typeof w.AndroidBridge.startSensors === 'function') {
+        try {
+          w.AndroidBridge.startSensors();
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     if (typeof window === 'undefined' || !('DeviceMotionEvent' in window)) return;
 
     this.motionListener = (event: DeviceMotionEvent) => {
@@ -306,6 +323,16 @@ export class GestureManager {
   }
 
   private removeHardwareSensors() {
+    if (typeof window !== 'undefined') {
+      const w = window as any;
+      if (w.AndroidBridge && typeof w.AndroidBridge.stopSensors === 'function') {
+        try {
+          w.AndroidBridge.stopSensors();
+        } catch {
+          // ignore
+        }
+      }
+    }
     if (this.motionListener) {
       window.removeEventListener('devicemotion', this.motionListener);
       this.motionListener = null;

@@ -2,7 +2,10 @@ app/build/
 build/
 .gradle/
 local.properties
-*.apk
+# Allow prebuilt release APKs in root
+!/gesture-music-wear.apk
+!/app-debug.apk
 *.aab
 *.dex
 *.class
+
