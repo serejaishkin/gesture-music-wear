@@ -1,16 +1,17 @@
 import { GestureType } from '../types';
 
 /**
- * Fist clench detector (Сжатие в кулак).
+ * Fist clench detector (Сжатие в кулак — жест активации приложения).
  *
  * When the user clenches their hand into a fist, the forearm flexor tendons
- * flex abruptly, generating a micro-shockwave / transient acceleration spike
- * across the watch casing with minimal rotational gyroscope velocity.
+ * flex abruptly, generating a transient muscular impulse spike across
+ * the watch casing with minimal rotational gyroscope velocity.
  *
- * Supports single firm clench or double clench to trigger PLAY_PAUSE.
+ * This acts as the deliberative ACTIVATION / ARMING gesture (guard window)
+ * to eliminate false triggers from incidental daily hand movements.
  */
 export class FistClenchDetector {
-  private clenchThreshold: number; // m/s^2 impulse threshold (default 3.2)
+  private clenchThreshold: number; // m/s^2 impulse threshold (default 3.0)
   private cooldownMs: number;
   private maxGyroMagnitude: number;
   private windowMs: number;
@@ -23,7 +24,7 @@ export class FistClenchDetector {
   private primeTime = 0;
 
   constructor(
-    clenchThreshold = 3.2,
+    clenchThreshold = 3.0,
     cooldownMs = 1200,
     maxGyroMagnitude = 1.8,
     windowMs = 800
@@ -51,7 +52,7 @@ export class FistClenchDetector {
     if (timestamp - this.lastGestureTime < this.cooldownMs) return null;
 
     // Gyroscope check: fist clenching happens with a stationary arm/wrist.
-    // If the user is rotating their wrist, ignore.
+    // If the user is actively rotating their wrist, ignore.
     const gyroMag = Math.max(Math.abs(gyroX), Math.abs(gyroY), Math.abs(gyroZ));
     if (gyroMag > this.maxGyroMagnitude) {
       this.isPrimed = false;
@@ -68,32 +69,17 @@ export class FistClenchDetector {
     this.prevAccMag = currentMag;
     this.prevTimestamp = timestamp;
 
-    // Remove expired clenches only if array has items
-    if (this.clenches.length > 0) {
-      this.clenches = this.clenches.filter((t) => timestamp - t <= this.windowMs);
-    }
-
-    // Sudden muscle impulse (acc magnitude spike OR high jerk with low rotation)
-    const isImpulse = currentMag >= this.clenchThreshold || jerk >= this.clenchThreshold * 18;
+    // Sudden muscular impulse from clenching fist
+    const isImpulse = currentMag >= this.clenchThreshold || jerk >= this.clenchThreshold * 16;
 
     if (isImpulse) {
       if (!this.isPrimed || timestamp - this.primeTime > 80) {
         this.isPrimed = true;
         this.primeTime = timestamp;
-        this.clenches.push(timestamp);
-
-        // Double clench within window (e.g. Samsung Wear OS "Clench Fist Twice")
-        if (this.clenches.length >= 2) {
-          const first = this.clenches[this.clenches.length - 2];
-          const second = this.clenches[this.clenches.length - 1];
-
-          if (second - first >= 120 && second - first <= this.windowMs) {
-            this.lastGestureTime = timestamp;
-            this.clenches = [];
-            this.isPrimed = false;
-            return GestureType.PLAY_PAUSE;
-          }
-        }
+        this.lastGestureTime = timestamp;
+        this.isPrimed = false;
+        // Fist clench is the ACTIVATION gesture to prevent false positives
+        return GestureType.ACTIVATE;
       }
     }
 

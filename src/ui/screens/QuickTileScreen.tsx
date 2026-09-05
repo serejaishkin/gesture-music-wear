@@ -1,7 +1,7 @@
 import React from 'react';
 import { gestureManager } from '../../gesture/GestureManager';
 import { audioPlayer } from '../../media/AudioPlayerService';
-import { Play, Pause, Settings, Music, Power, Hand } from 'lucide-react';
+import { Play, Pause, Settings, Music, Power, Hand, GraduationCap } from 'lucide-react';
 
 interface QuickTileScreenProps {
   isRunning: boolean;
@@ -9,9 +9,10 @@ interface QuickTileScreenProps {
   lastGesture: string;
   onOpenSettings: () => void;
   onOpenPlayer: () => void;
+  onOpenTraining?: () => void;
 }
 
-export const QuickTileScreen: React.FC<QuickTileScreenProps> = ({ isRunning, leftHand, lastGesture, onOpenSettings, onOpenPlayer }) => {
+export const QuickTileScreen: React.FC<QuickTileScreenProps> = ({ isRunning, leftHand, lastGesture, onOpenSettings, onOpenPlayer, onOpenTraining }) => {
   const isPlaying = audioPlayer.getPlaybackState();
   const currentTrack = audioPlayer.getTrack();
 
@@ -70,12 +71,17 @@ export const QuickTileScreen: React.FC<QuickTileScreenProps> = ({ isRunning, lef
         </div>
       </div>
 
-      <div className="w-full flex items-center justify-center gap-2 pt-2.5 mt-auto border-t border-white/[0.06]">
-        <button type="button" onClick={onOpenPlayer} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-semibold bg-cyan-400/[0.07] hover:bg-cyan-400/[0.12] text-cyan-300 border border-cyan-400/15 active:scale-95 transition-all">
+      <div className="w-full flex items-center justify-center gap-1.5 pt-2 mt-auto border-t border-white/[0.06]">
+        <button type="button" onClick={onOpenPlayer} className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[9px] font-semibold bg-cyan-400/[0.07] hover:bg-cyan-400/[0.12] text-cyan-300 border border-cyan-400/15 active:scale-95 transition-all">
           <Music className="w-3 h-3" /> Плеер
         </button>
-        <button type="button" onClick={onOpenSettings} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-semibold bg-white/[0.045] hover:bg-white/[0.08] text-neutral-300 border border-white/[0.08] active:scale-95 transition-all">
-          <Settings className="w-3 h-3" /> Настройки
+        {onOpenTraining && (
+          <button type="button" onClick={onOpenTraining} className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[9px] font-semibold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 border border-cyan-400/25 active:scale-95 transition-all" title="Обучение и калибровка жестов">
+            <GraduationCap className="w-3 h-3 text-cyan-300" /> Обучение
+          </button>
+        )}
+        <button type="button" onClick={onOpenSettings} className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[9px] font-semibold bg-white/[0.045] hover:bg-white/[0.08] text-neutral-300 border border-white/[0.08] active:scale-95 transition-all">
+          <Settings className="w-3 h-3" /> Опции
         </button>
       </div>
     </div>

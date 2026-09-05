@@ -43,7 +43,7 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
       case GestureType.PLAY_PAUSE:
         return 'Play/Pause';
       case GestureType.ACTIVATE:
-        return 'Активация';
+        return '✊ Активация (кулак)';
       default:
         return '';
     }
@@ -178,7 +178,7 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
           onClick={() => handleStartTraining(GestureType.ACTIVATE)}
           className="w-full py-1.5 px-3 rounded-full text-xs font-medium bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 disabled:pointer-events-none text-neutral-100 border border-white/5 active:scale-95 transition-all"
         >
-          🔓 Активация
+          ✊ Активация (кулак)
         </button>
       </div>
 

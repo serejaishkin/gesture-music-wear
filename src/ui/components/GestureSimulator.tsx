@@ -151,11 +151,11 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
     });
   };
 
-  // 4. Emulate physical fist clench (✊✊ Двойное сжатие в кулак)
+  // 4. Emulate physical fist clench (✊ Сжатие в кулак — жест активации)
   const simulateFistClench = () => {
     if (isSimulating) return;
     setIsSimulating(true);
-    showNote('Двойное сжатие в кулак...');
+    showNote('Сжатие в кулак (активация)...');
 
     const emitClenchImpulse = (callback: () => void) => {
       let t = 0;
@@ -163,9 +163,9 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
         t += 20;
         if (t <= 60) {
           // Micro-shockwave across multiple axes (high jerk, low gyro)
-          const ax = 2.4;
-          const ay = 2.8;
-          const az = 3.5;
+          const ax = 3.2;
+          const ay = 3.0;
+          const az = 3.8;
           gestureManager.processSample(performance.now(), 0.1, 0.1, 0.1, ax, ay, az);
           updateSensorsUI(0.1, 0.1, 0.1, ax, ay, az);
         } else if (t <= 120) {
@@ -181,14 +181,8 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
       }, 20);
     };
 
-    // First clench
     emitClenchImpulse(() => {
-      setTimeout(() => {
-        // Second clench within 180ms
-        emitClenchImpulse(() => {
-          setIsSimulating(false);
-        });
-      }, 180);
+      setIsSimulating(false);
     });
   };
 
@@ -291,9 +285,9 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
           disabled={isSimulating}
           className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-neutral-800/90 hover:bg-neutral-700/90 active:scale-95 border border-white/5 transition-all text-center group disabled:opacity-50"
         >
-          <span className="text-base mb-1 group-hover:scale-110 transition-transform">✊✊</span>
+          <span className="text-base mb-1 group-hover:scale-110 transition-transform">✊</span>
           <span className="text-xs font-medium text-neutral-100">Сжатие в кулак</span>
-          <span className="text-[9px] text-cyan-400">Play / Pause</span>
+          <span className="text-[9px] text-cyan-400">🔓 Активация (15 с)</span>
         </button>
       </div>
 
@@ -305,8 +299,8 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
           className="w-full flex items-center justify-center gap-2 p-2 rounded-xl bg-neutral-800/70 hover:bg-neutral-700/70 active:scale-95 border border-white/5 transition-all text-center group disabled:opacity-50"
         >
           <span className="text-sm group-hover:rotate-12 transition-transform">🔓</span>
-          <span className="text-xs font-medium text-neutral-200">Жест активации</span>
-          <span className="text-[9px] text-cyan-400">(Arm Guard 15s)</span>
+          <span className="text-xs font-medium text-neutral-200">Быстрая активация приложения</span>
+          <span className="text-[9px] text-cyan-400">(Защита от ложных)</span>
         </button>
       </div>
 

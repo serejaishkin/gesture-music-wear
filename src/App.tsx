@@ -62,6 +62,85 @@ export function App() {
     };
   }, []);
 
+  // In Wear OS APK or Watch Only mode, render the native circular smartwatch interface edge-to-edge
+  if (watchOnlyMode) {
+    return (
+      <div className="w-full h-full min-h-screen bg-black text-neutral-100 flex flex-col items-center justify-start select-none overflow-hidden">
+        {/* Desktop exit hint (only shows on large desktop screens so devs can exit back to studio) */}
+        {!isAndroidApk && (
+          <div className="w-full bg-neutral-900/90 py-1 px-3 border-b border-white/10 flex items-center justify-between text-[11px] z-50">
+            <span className="text-cyan-400 font-medium">Режим часов Wear OS (Galaxy Watch 4)</span>
+            <button
+              type="button"
+              onClick={() => setWatchOnlyMode(false)}
+              className="text-neutral-300 hover:text-white underline cursor-pointer"
+            >
+              Вернуться в режим стенда
+            </button>
+          </div>
+        )}
+
+        <WatchFrame
+          standalone={true}
+          currentScreen={currentScreen}
+          onSelectScreen={setCurrentScreen}
+        >
+          {currentScreen === 'tile' && (
+            <QuickTileScreen
+              isRunning={isRunning}
+              leftHand={settings.leftHand}
+              lastGesture={lastGesture}
+              onOpenSettings={() => setCurrentScreen('control')}
+              onOpenPlayer={() => setCurrentScreen('player')}
+              onOpenTraining={() => setCurrentScreen('training')}
+            />
+          )}
+
+          {currentScreen === 'control' && (
+            <ControlScreen
+              onOpenTile={() => setCurrentScreen('tile')}
+              onOpenPlayer={() => setCurrentScreen('player')}
+              onOpenTraining={() => setCurrentScreen('training')}
+              isRunning={isRunning}
+              strategyName={strategyName}
+              lastGesture={lastGesture}
+              saveMessage={saveMessage}
+              angleThreshold={settings.angleThreshold}
+              pinchThreshold={settings.pinchThreshold}
+              fistClenchThreshold={settings.fistClenchThreshold}
+              fistClenchEnabled={settings.fistClenchEnabled}
+              minDuration={settings.minDuration}
+              maxDuration={settings.maxDuration}
+              gestureCooldown={settings.gestureCooldown}
+              leftHand={settings.leftHand}
+              vibrationEnabled={settings.vibrationEnabled}
+              vibrationIntensity={settings.vibrationIntensity}
+              vibrationDuration={settings.vibrationDuration}
+              speedTolerance={settings.speedTolerance}
+            />
+          )}
+
+          {currentScreen === 'player' && (
+            <PlayerScreen
+              onBack={() => setCurrentScreen('control')}
+              isRunning={isRunning}
+            />
+          )}
+
+          {currentScreen === 'training' && (
+            <TrainingScreen
+              onBack={() => setCurrentScreen('control')}
+              trainingProgress={trainingProgress}
+              trainingRepetitions={trainingRepetitions}
+              trainingDone={trainingDone}
+              trainingSuccess={trainingSuccess}
+            />
+          )}
+        </WatchFrame>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col items-center justify-start p-2 sm:p-4 lg:p-6 select-none">
       {/* Top Header */}
@@ -74,7 +153,7 @@ export function App() {
             <h1 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
               Gesture Music Wear
               <span className="text-[9px] uppercase font-semibold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800/60">
-                {isAndroidApk ? 'Wear OS APK' : 'Wear OS'}
+                Wear OS
               </span>
             </h1>
             <p className="text-[11px] text-neutral-400 hidden sm:block">
@@ -89,7 +168,7 @@ export function App() {
           <a
             href="./gesture-music-wear.apk"
             download="gesture-music-wear.apk"
-            title="Скачать собранный APK пакет (85 КБ)"
+            title="Скачать собранный APK пакет (141 КБ)"
             className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900 transition-all shadow-sm active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
@@ -99,15 +178,11 @@ export function App() {
           {/* Mode Switcher Button */}
           <button
             type="button"
-            onClick={() => setWatchOnlyMode(!watchOnlyMode)}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-              watchOnlyMode
-                ? 'bg-cyan-950 text-cyan-300 border-cyan-700 shadow-sm'
-                : 'bg-neutral-900 text-neutral-300 border-white/10 hover:border-cyan-500/50'
-            }`}
+            onClick={() => setWatchOnlyMode(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-white/10 bg-neutral-900 text-neutral-300 hover:border-cyan-500/50 transition-all cursor-pointer"
           >
-            <Watch className="w-3.5 h-3.5" />
-            <span>{watchOnlyMode ? '⌚ Только часы' : '🖥️ Стенд + Часы'}</span>
+            <Watch className="w-3.5 h-3.5 text-cyan-400" />
+            <span>⌚ Только часы</span>
           </button>
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-900 border border-white/10 text-neutral-300">
@@ -159,6 +234,7 @@ export function App() {
                 lastGesture={lastGesture}
                 onOpenSettings={() => setCurrentScreen('control')}
                 onOpenPlayer={() => setCurrentScreen('player')}
+                onOpenTraining={() => setCurrentScreen('training')}
               />
             )}
 

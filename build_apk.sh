@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# Ensure SDK jars are present
+if [ ! -f /tmp/android.jar ]; then
+    echo "Downloading android.jar..."
+    curl -fsSL "https://raw.githubusercontent.com/Sable/android-platforms/master/android-33/android.jar" -o /tmp/android.jar
+fi
+if [ ! -f /tmp/r8.jar ]; then
+    echo "Downloading r8.jar (D8 dexer)..."
+    curl -fsSL "https://maven.google.com/com/android/tools/r8/8.2.42/r8-8.2.42.jar" -o /tmp/r8.jar
+fi
+
 BUILD_DIR="/tmp/apk_build"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"/{src,res,assets,bin,gen,dex}
@@ -13,6 +23,7 @@ cp -r app/src/main/java/* "$BUILD_DIR/src/"
 # Copy production web assets
 echo "2. Copying built web assets into assets/..."
 cp -r dist "$BUILD_DIR/assets/"
+rm -f "$BUILD_DIR/assets/dist/"*.apk
 
 echo "3. Running aapt to generate R.java and compiled resources..."
 aapt package -m -J "$BUILD_DIR/gen" -M "$BUILD_DIR/AndroidManifest.xml" -S "$BUILD_DIR/res" -I /tmp/android.jar
@@ -72,8 +83,12 @@ cp "gesture-music-wear.apk" "app-debug.apk"
 mkdir -p app/build/outputs/apk/debug
 cp "gesture-music-wear.apk" app/build/outputs/apk/debug/app-debug.apk
 
+mkdir -p public dist
+cp "gesture-music-wear.apk" "app-debug.apk" public/
+cp "gesture-music-wear.apk" "app-debug.apk" dist/
+
 echo "9. Verifying signed APK..."
 apksigner verify "gesture-music-wear.apk"
 
 echo "SUCCESS: APK created at ./gesture-music-wear.apk and ./app-debug.apk"
-ls -lh gesture-music-wear.apk
+ls -lh gesture-music-wear.apk app-debug.apk

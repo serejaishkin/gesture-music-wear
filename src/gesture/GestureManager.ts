@@ -390,13 +390,21 @@ export class GestureManager {
 
     // 2. Fall back to heuristic detectors
     if (!gesture) {
-      const wrist = this.wristDetector.process(timestamp, gx, gy, gz, ax, ay, az);
-      const pinch = this.pinchDetector.process(timestamp, gx, gy, gz, ax, ay, az);
       const fist = this.settings.fistClenchEnabled
         ? this.fistDetector.process(timestamp, gx, gy, gz, ax, ay, az)
         : null;
 
-      gesture = wrist || pinch || fist;
+      if (fist === GestureType.ACTIVATE) {
+        gesture = fist;
+      } else {
+        // Guard media gestures (wrist rotation & pinch) with fist activation to eliminate false triggers
+        const canExecuteMedia = !this.settings.fistClenchEnabled || this.armingManager.isArmed;
+        if (canExecuteMedia) {
+          const wrist = this.wristDetector.process(timestamp, gx, gy, gz, ax, ay, az);
+          const pinch = this.pinchDetector.process(timestamp, gx, gy, gz, ax, ay, az);
+          gesture = wrist || pinch;
+        }
+      }
     }
 
     if (gesture) {
@@ -444,7 +452,7 @@ export class GestureManager {
       case GestureType.PLAY_PAUSE:
         return '⏯️ Play / Pause';
       case GestureType.ACTIVATE:
-        return '🔓 Активация';
+        return '✊ Активация (кулак)';
       default:
         return gesture;
     }

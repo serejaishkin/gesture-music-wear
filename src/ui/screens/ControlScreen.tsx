@@ -119,7 +119,7 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
         />
 
         <SensitivitySlider
-          label="Сжатие в кулак"
+          label="✊ Кулак (активация)"
           value={fistClenchThreshold}
           min={1.8}
           max={5.5}
@@ -129,7 +129,7 @@ export const ControlScreen: React.FC<ControlScreenProps> = ({
         />
 
         <div className="w-full max-w-[210px] flex items-center justify-between py-1 px-2 text-xs">
-          <span className="text-neutral-300 text-[11px]">Жест сжатия кулака:</span>
+          <span className="text-neutral-300 text-[10px]">Защита от ложных (кулак):</span>
           <button
             type="button"
             onClick={() => gestureManager.updateFistClenchEnabled(!fistClenchEnabled)}
