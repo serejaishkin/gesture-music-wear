@@ -35,8 +35,12 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class MainActivity extends Activity implements SensorEventListener {
     private static final String TAG = "GestureMusicWear";
@@ -66,7 +70,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private float mLastGx = 0f, mLastGy = 0f, mLastGz = 0f;
     private float mLastAx = 0f, mLastAy = 0f, mLastAz = 0f;
     private long mLastGestureTriggerTime = 0L;
-    private static final long GESTURE_COOLDOWN_MS = 650L;
+    private static final long GESTURE_COOLDOWN_MS = 1100L;
 
     // Audio manager for real media control
     private AudioManager mAudioManager;
@@ -129,13 +133,46 @@ public class MainActivity extends Activity implements SensorEventListener {
     private Button mTrainingRestartBtn;
     private Button mTrainingBackBtn;
 
-    private TextView mSensorsGyroText;
-    private TextView mSensorsAccelText;
-    private ProgressBar mSensorsIntensityBar;
-    private TextView mSensorsTriggerAlert;
-
     // Rotary Bezel accumulation
     private float mRotaryAccumulator = 0f;
+
+    // ==========================================
+    // DTW GESTURE RECOGNITION ENGINE
+    // ==========================================
+    private static final int WINDOW_SIZE = 90;          // Max samples in sliding window
+    private static final int MIN_SAMPLES = 22;          // Need substantial gesture
+    private static final float DTW_THRESHOLD = 1.05f;   // Strict DTW distance threshold
+    private static final float MOTION_START_THRESHOLD = 0.15f; // Above noise floor (~0.05-0.08)
+    private static final float MOTION_EVAL_THRESHOLD = 0.38f; // Real motion to evaluate DTW
+    private static final float START_MOTION_THRESHOLD = 0.35f;
+    private static final float END_MOTION_THRESHOLD = 0.12f;
+    private static final int QUIET_SAMPLES_TO_END = 6;
+    private static final int RECOGNITION_EVAL_INTERVAL = 14; // Evaluate every N samples
+    private static final long DTW_RECOGNITION_COOLDOWN_MS = 1500L;
+    private static final int IDLE_CLEAR_THRESHOLD = 3;  // Clear window after N quiet eval cycles
+    private static final long MIN_GESTURE_DURATION_MS = 320L; // Minimum duration for real gesture
+
+    // Sliding window buffer: [WINDOW_SIZE][6] where 6 = {gx, gy, gz, ax, ay, az}
+    private final float[][] mSensorWindow = new float[WINDOW_SIZE][6];
+    private int mWindowIndex = 0;
+    private int mWindowFill = 0;
+
+    // Training recording buffer (raw samples before normalization)
+    private final List<float[]> mTrainingRecording = new ArrayList<>();
+    private boolean mTrainingMotionActive = false;
+    private int mTrainingQuietCount = 0;
+    private float[] mTrainingPrevSample = null;
+    private long mTrainingRecordingStartTime = 0L;
+    private int mTrainingRepIndex = 0; // Which repetition we're on within a session
+
+    // Stored gesture templates: gestureType -> list of normalized sample sequences
+    private final Map<Integer, List<float[][]>> mGestureTemplates = new HashMap<>();
+
+    // DTW recognition state
+    private long mLastDtwRecognitionTime = 0L;
+    private int mDtwEvalCounter = 0;
+    private int mIdleCycleCount = 0; // Counts consecutive quiet evaluation cycles
+    private long mWindowFillStartTime = 0L; // When window started receiving motion
 
     // Handlers, timer and gestures
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
@@ -151,6 +188,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
             loadPreferences();
+            loadGestureTemplates();
 
             mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -360,7 +398,10 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTileLastGestureText.setTextColor(0xFF22D3EE); // Cyan 400
         mTileLastGestureText.setTextSize(10);
         mTileLastGestureText.setGravity(Gravity.CENTER);
-        mTileLastGestureText.setText(mSensorsActive ? "Ожидание жеста..." : "Жесты отключены");
+        int trainedCount = mGestureTemplates.size();
+        String tileHint = mSensorsActive ? "Ожидание жеста..." : "Жесты отключены";
+        if (trainedCount > 0) tileHint += " (DTW: " + trainedCount + " жестов)";
+        mTileLastGestureText.setText(tileHint);
         layout.addView(mTileLastGestureText);
 
         // Direct Quick Button to Training & Calibration
@@ -824,19 +865,20 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingScrollView = new ScrollView(this);
         mTrainingScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mTrainingScrollView.setVerticalScrollBarEnabled(false);
+        mTrainingScrollView.setFillViewport(true);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER_HORIZONTAL);
-        layout.setPadding(dp(20), dp(44), dp(20), dp(36));
+        layout.setPadding(dp(24), dp(52), dp(24), dp(48));
 
         TextView title = new TextView(this);
-        title.setText("🎓 Обучение жестов");
+        title.setText("🎓 Обучение");
         title.setTextColor(0xFFFFFFFF);
-        title.setTextSize(13);
+        title.setTextSize(14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 0, 0, dp(4));
+        title.setPadding(0, 0, 0, dp(6));
         layout.addView(title);
 
         // --- SECTION A: SELECTION MENU ---
@@ -845,29 +887,59 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingMenuLayout.setGravity(Gravity.CENTER_HORIZONTAL);
 
         TextView menuSub = new TextView(this);
-        menuSub.setText("Выберите жест для калибровки:");
+        menuSub.setText("Выберите жест:");
         menuSub.setTextColor(0xFF94A3B8);
         menuSub.setTextSize(10);
         menuSub.setGravity(Gravity.CENTER);
         menuSub.setPadding(0, 0, 0, dp(6));
         mTrainingMenuLayout.addView(menuSub);
 
-        mTrainingMenuLayout.addView(createTrainingChoiceButton("🔄 След. трек (Вращение наружу)", new Runnable() {
+        mTrainingMenuLayout.addView(createTrainingChoiceButton("🔄 Вращение наружу", new Runnable() {
             @Override
             public void run() { startGestureTraining(TRAINING_OUTWARD); }
         }));
-        mTrainingMenuLayout.addView(createTrainingChoiceButton("🔄 Пред. трек (Вращение внутрь)", new Runnable() {
+        mTrainingMenuLayout.addView(createTrainingChoiceButton("🔄 Вращение внутрь", new Runnable() {
             @Override
             public void run() { startGestureTraining(TRAINING_INWARD); }
         }));
-        mTrainingMenuLayout.addView(createTrainingChoiceButton("✌️ Play/Pause (Щипок)", new Runnable() {
+        mTrainingMenuLayout.addView(createTrainingChoiceButton("✌️ Щипок", new Runnable() {
             @Override
             public void run() { startGestureTraining(TRAINING_PINCH); }
         }));
-        mTrainingMenuLayout.addView(createTrainingChoiceButton("✊ Громкость+ (Кулак)", new Runnable() {
+        mTrainingMenuLayout.addView(createTrainingChoiceButton("✊ Кулак", new Runnable() {
             @Override
             public void run() { startGestureTraining(TRAINING_FIST); }
         }));
+
+        // DTW status
+        TextView dtwStatus = new TextView(this);
+        dtwStatus.setTextColor(0xFF64748B);
+        dtwStatus.setTextSize(8);
+        dtwStatus.setGravity(Gravity.CENTER);
+        dtwStatus.setPadding(0, dp(4), 0, dp(2));
+        int totalTemplates = 0;
+        for (List<float[][]> t : mGestureTemplates.values()) totalTemplates += t.size();
+        dtwStatus.setText("DTW: " + totalTemplates + " шаблонов");
+        mTrainingMenuLayout.addView(dtwStatus);
+
+        Button clearTemplatesBtn = new Button(this);
+        clearTemplatesBtn.setText("🗑 Очистить шаблоны");
+        clearTemplatesBtn.setTextSize(9);
+        clearTemplatesBtn.setTextColor(0xFFEF4444);
+        clearTemplatesBtn.setBackground(createPillDrawable(0xFF450A0A, 0xFF7F1D1D, dp(10)));
+        LinearLayout.LayoutParams clearP = new LinearLayout.LayoutParams(dp(140), dp(26));
+        clearP.setMargins(0, dp(2), 0, dp(2));
+        clearTemplatesBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mGestureTemplates.clear();
+                saveGestureTemplates();
+                vibrateFeedback(40);
+                // Refresh DTW status text
+                dtwStatus.setText("DTW шаблонов: 0 (макс. 3/жест)");
+            }
+        });
+        mTrainingMenuLayout.addView(clearTemplatesBtn, clearP);
 
         layout.addView(mTrainingMenuLayout);
 
@@ -955,41 +1027,6 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         layout.addView(mTrainingActiveLayout);
 
-        // --- SECTION C: LIVE SENSORS PREVIEW ---
-        LinearLayout sensorsBox = new LinearLayout(this);
-        sensorsBox.setOrientation(LinearLayout.VERTICAL);
-        sensorsBox.setGravity(Gravity.CENTER_HORIZONTAL);
-        sensorsBox.setPadding(0, dp(8), 0, 0);
-
-        mSensorsGyroText = new TextView(this);
-        mSensorsGyroText.setText("Гиро: Gx:0 Gy:0 Gz:0");
-        mSensorsGyroText.setTextColor(0xFF38BDF8);
-        mSensorsGyroText.setTextSize(9);
-        sensorsBox.addView(mSensorsGyroText);
-
-        mSensorsAccelText = new TextView(this);
-        mSensorsAccelText.setText("Аксель: Ax:0 Ay:0 Az:9.8");
-        mSensorsAccelText.setTextColor(0xFFA78BFA);
-        mSensorsAccelText.setTextSize(9);
-        sensorsBox.addView(mSensorsAccelText);
-
-        mSensorsIntensityBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        mSensorsIntensityBar.setMax(100);
-        mSensorsIntensityBar.setProgress(0);
-        LinearLayout.LayoutParams barP = new LinearLayout.LayoutParams(dp(130), dp(6));
-        barP.setMargins(0, dp(2), 0, dp(4));
-        sensorsBox.addView(mSensorsIntensityBar, barP);
-
-        mSensorsTriggerAlert = new TextView(this);
-        mSensorsTriggerAlert.setText("Датчики активны");
-        mSensorsTriggerAlert.setTextColor(0xFF22C55E);
-        mSensorsTriggerAlert.setTextSize(9);
-        mSensorsTriggerAlert.setTypeface(Typeface.DEFAULT_BOLD);
-        mSensorsTriggerAlert.setGravity(Gravity.CENTER);
-        sensorsBox.addView(mSensorsTriggerAlert);
-
-        layout.addView(sensorsBox);
-
         mTrainingScrollView.addView(layout);
         return mTrainingScrollView;
     }
@@ -1018,6 +1055,14 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingRepsCompleted = 0;
         mTrainingAccumulatedSum = 0f;
         mTrainingFinished = false;
+
+        // Reset DTW training recording state
+        mTrainingRecording.clear();
+        mTrainingMotionActive = false;
+        mTrainingQuietCount = 0;
+        mTrainingPrevSample = null;
+        mTrainingRecordingStartTime = 0L;
+        mTrainingRepIndex = 0;
 
         mTrainingMenuLayout.setVisibility(View.GONE);
         mTrainingActiveLayout.setVisibility(View.VISIBLE);
@@ -1056,6 +1101,9 @@ public class MainActivity extends Activity implements SensorEventListener {
     private void stopGestureTraining() {
         mActiveTrainingGesture = TRAINING_NONE;
         mTrainingFinished = false;
+        mTrainingRecording.clear();
+        mTrainingMotionActive = false;
+        mTrainingPrevSample = null;
         mTrainingMenuLayout.setVisibility(View.VISIBLE);
         mTrainingActiveLayout.setVisibility(View.GONE);
         vibrateFeedback(25);
@@ -1296,7 +1344,14 @@ public class MainActivity extends Activity implements SensorEventListener {
         float threshold = mAngleThreshold * 4.0f; // Angular velocity threshold (deg/s)
         boolean isOutward = mIsLeftHand ? (gy < 0) : (gy > 0);
 
+        // Feed DTW engine (always, even during training)
+        feedDtwWindow(gx, gy, gz, mLastAx, mLastAy, mLastAz);
+
+        // Feed training recording if in training mode
         if (mActiveTrainingGesture != TRAINING_NONE && !mTrainingFinished) {
+            if (feedTrainingRecording(gx, gy, gz, mLastAx, mLastAy, mLastAz)) return;
+
+            // Legacy threshold-based training (fallback)
             if (mActiveTrainingGesture == TRAINING_OUTWARD && isOutward && rotationSpeed > mAngleThreshold * 2.2f) {
                 recordTrainingRepetition(rotationSpeed, "Вращение наружу");
                 return;
@@ -1326,7 +1381,11 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         float totalG = (float) Math.sqrt(ax * ax + ay * ay + az * az) / 9.80665f;
 
+        // Feed training recording if in training mode (for pinch/fist gestures)
         if (mActiveTrainingGesture != TRAINING_NONE && !mTrainingFinished) {
+            if (feedTrainingRecording(mLastGx, mLastGy, mLastGz, ax, ay, az)) return;
+
+            // Legacy threshold-based training (fallback)
             if (mActiveTrainingGesture == TRAINING_PINCH && totalG > 1.5f && totalG < 3.2f) {
                 recordTrainingRepetition(totalG, "Щипок пальцами");
                 return;
@@ -1365,36 +1424,416 @@ public class MainActivity extends Activity implements SensorEventListener {
                 if (mTileLastGestureText != null) {
                     mTileLastGestureText.setText("⚡ " + gestureName + " -> " + actionName);
                 }
-                if (mSensorsTriggerAlert != null) {
-                    mSensorsTriggerAlert.setText("⚡ СРАБОТАЛ: " + gestureName.toUpperCase());
-                    mMainHandler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mSensorsTriggerAlert != null) {
-                                mSensorsTriggerAlert.setText("Ожидание жеста...");
-                            }
-                        }
-                    }, 1200);
-                }
             }
         });
     }
 
     private void updateLiveSensorsUI() {
-        if (mCurrentScreen != 3) return;
+    }
 
-        if (mSensorsGyroText != null) {
-            mSensorsGyroText.setText(String.format(Locale.US,
-                "Гиро: X:%+.1f Y:%+.1f Z:%+.1f rad/s", mLastGx, mLastGy, mLastGz));
+    // ==========================================
+    // DTW GESTURE TRAINING & RECOGNITION
+    // ==========================================
+
+    /** Add a sensor sample to the sliding window for DTW recognition. */
+    private void feedDtwWindow(float gx, float gy, float gz, float ax, float ay, float az) {
+        boolean wasEmpty = (mWindowFill == 0);
+
+        mSensorWindow[mWindowIndex][0] = gx;
+        mSensorWindow[mWindowIndex][1] = gy;
+        mSensorWindow[mWindowIndex][2] = gz;
+        mSensorWindow[mWindowIndex][3] = ax;
+        mSensorWindow[mWindowIndex][4] = ay;
+        mSensorWindow[mWindowIndex][5] = az;
+        mWindowIndex = (mWindowIndex + 1) % WINDOW_SIZE;
+        if (mWindowFill < WINDOW_SIZE) mWindowFill++;
+
+        if (wasEmpty) {
+            mWindowFillStartTime = System.currentTimeMillis();
         }
-        if (mSensorsAccelText != null) {
-            mSensorsAccelText.setText(String.format(Locale.US,
-                "Аксель: X:%+.1f Y:%+.1f Z:%+.1f m/s²", mLastAx, mLastAy, mLastAz));
+
+        // Frame-to-frame delta (real motion, not gravity)
+        if (mWindowFill >= 2) {
+            int prevIdx = (mWindowIndex - 2 + WINDOW_SIZE) % WINDOW_SIZE;
+            float dgx = gx - mSensorWindow[prevIdx][0];
+            float dgy = gy - mSensorWindow[prevIdx][1];
+            float dgz = gz - mSensorWindow[prevIdx][2];
+            float dax = ax - mSensorWindow[prevIdx][3];
+            float day = ay - mSensorWindow[prevIdx][4];
+            float daz = az - mSensorWindow[prevIdx][5];
+            float delta = (float) Math.sqrt(dgx * dgx + dgy * dgy + dgz * dgz + dax * dax + day * day + daz * daz);
+            if (delta > 0.8f) {
+                mIdleCycleCount = 0;
+            }
         }
-        if (mSensorsIntensityBar != null) {
-            float speed = (float) Math.sqrt(mLastGx * mLastGx + mLastGy * mLastGy + mLastGz * mLastGz);
-            int percent = Math.min(100, (int) (speed * 20));
-            mSensorsIntensityBar.setProgress(percent);
+
+        mDtwEvalCounter++;
+        if (mDtwEvalCounter >= RECOGNITION_EVAL_INTERVAL) {
+            mDtwEvalCounter = 0;
+            tryDtwRecognition();
+        }
+    }
+
+    /** Attempt to recognize a trained gesture from the current sliding window. */
+    private void tryDtwRecognition() {
+        long now = System.currentTimeMillis();
+        if (now - mLastDtwRecognitionTime < DTW_RECOGNITION_COOLDOWN_MS) return;
+        if (mActiveTrainingGesture != TRAINING_NONE) return;
+
+        int count = mWindowFill;
+        if (count < MIN_SAMPLES) return;
+
+        float[][] window = getWindowSamples(count);
+        float energy = motionEnergy(window, count);
+
+        // Below start threshold = pure idle, clear window
+        if (energy < MOTION_START_THRESHOLD) {
+            mIdleCycleCount++;
+            if (mIdleCycleCount >= IDLE_CLEAR_THRESHOLD) {
+                mWindowFill = 0;
+                mWindowIndex = 0;
+            }
+            return;
+        }
+
+        mIdleCycleCount = 0;
+
+        // Between start and eval threshold = accumulating but not yet evaluating
+        if (energy < MOTION_EVAL_THRESHOLD) return;
+
+        // Need enough samples AND enough elapsed time for a real gesture
+        if (count < MIN_SAMPLES) return;
+        long elapsed = System.currentTimeMillis() - mWindowFillStartTime;
+        if (elapsed < MIN_GESTURE_DURATION_MS) return;
+
+        float[][] normalized = normalizeSamples(window, count);
+
+        int bestType = -1;
+        float bestDist = Float.MAX_VALUE;
+
+        for (Map.Entry<Integer, List<float[][]>> entry : mGestureTemplates.entrySet()) {
+            int gestureType = entry.getKey();
+            List<float[][]> templates = entry.getValue();
+            if (templates == null || templates.isEmpty()) continue;
+
+            for (float[][] template : templates) {
+                float dist = dtwDistance(normalized, count, template, template.length);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestType = gestureType;
+                }
+            }
+        }
+
+        if (bestType >= 0 && bestDist <= DTW_THRESHOLD) {
+            mLastDtwRecognitionTime = now;
+            mWindowFill = 0;
+            mWindowIndex = 0;
+            mIdleCycleCount = 0;
+            executeDtwGesture(bestType, bestDist);
+        }
+    }
+
+    /** Execute the action for a DTW-recognized gesture. */
+    private void executeDtwGesture(int gestureType, float distance) {
+        switch (gestureType) {
+            case TRAINING_OUTWARD:
+                triggerGestureAction("DTW: Вращение наружу", "Следующий трек (DTW)", KeyEvent.KEYCODE_MEDIA_NEXT);
+                break;
+            case TRAINING_INWARD:
+                triggerGestureAction("DTW: Вращение внутрь", "Предыдущий трек (DTW)", KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+                break;
+            case TRAINING_PINCH:
+                mIsPlaying = !mIsPlaying;
+                if (mPlayerPlayPauseBtn != null) mPlayerPlayPauseBtn.setText(mIsPlaying ? "⏸" : "▶");
+                triggerGestureAction("DTW: Щипок", mIsPlaying ? "Воспроизведение (DTW)" : "Пауза (DTW)", KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+                break;
+            case TRAINING_FIST:
+                adjustVolume(1);
+                triggerGestureAction("DTW: Кулак", "Громкость+ (DTW)", -1);
+                break;
+        }
+    }
+
+    // --- Training sample recording for DTW templates ---
+
+    /** Feed sensor data into the training recording pipeline. Returns true if training handled it. */
+    private boolean feedTrainingRecording(float gx, float gy, float gz, float ax, float ay, float az) {
+        if (mActiveTrainingGesture == TRAINING_NONE || mTrainingFinished) return false;
+
+        float[] sample = new float[]{gx, gy, gz, ax, ay, az};
+        float energy = mTrainingPrevSample != null ? sampleDistance(mTrainingPrevSample, sample) : 0f;
+        mTrainingPrevSample = sample;
+
+        if (!mTrainingMotionActive) {
+            if (energy >= START_MOTION_THRESHOLD) {
+                mTrainingMotionActive = true;
+                mTrainingRecordingStartTime = System.currentTimeMillis();
+                mTrainingRecording.clear();
+                mTrainingRecording.add(sample);
+                mTrainingQuietCount = 0;
+                updateTrainingFeedback("Движение обнаружено... Запись #" + (mTrainingRepIndex + 1));
+            }
+            return true;
+        }
+
+        // Recording active
+        if (mTrainingRecording.size() < WINDOW_SIZE) {
+            mTrainingRecording.add(sample);
+        }
+
+        if (energy < END_MOTION_THRESHOLD) {
+            mTrainingQuietCount++;
+        } else {
+            mTrainingQuietCount = 0;
+        }
+
+        // Auto-stop: quiet for enough samples, or buffer full
+        if (mTrainingQuietCount >= QUIET_SAMPLES_TO_END || mTrainingRecording.size() >= WINDOW_SIZE) {
+            finishTrainingRepetition();
+        }
+        return true;
+    }
+
+    /** Called when a single training repetition recording is complete. */
+    private void finishTrainingRepetition() {
+        mTrainingMotionActive = false;
+        mTrainingQuietCount = 0;
+        mTrainingPrevSample = null;
+
+        int count = mTrainingRecording.size();
+        if (count < MIN_SAMPLES) {
+            updateTrainingFeedback("Слишком коротко, попробуйте ещё раз...");
+            return;
+        }
+
+        // Normalize the recorded samples
+        float[][] raw = mTrainingRecording.toArray(new float[0][]);
+        float[][] normalized = normalizeSamples(raw, count);
+
+        // Store as template
+        int gestureType = mActiveTrainingGesture;
+        if (!mGestureTemplates.containsKey(gestureType)) {
+            mGestureTemplates.put(gestureType, new ArrayList<>());
+        }
+        // Keep at most 3 templates per gesture (best variety)
+        List<float[][]> templates = mGestureTemplates.get(gestureType);
+        if (templates.size() >= 3) {
+            templates.remove(0); // Remove oldest
+        }
+        templates.add(normalized);
+
+        mTrainingRepIndex++;
+        vibrateFeedback(60);
+
+        mMainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mTrainingRepsCounter != null) {
+                    mTrainingRepsCounter.setText(mTrainingRepIndex + " / " + TRAINING_TARGET_REPS);
+                }
+                if (mTrainingProgressBar != null) {
+                    mTrainingProgressBar.setProgress(mTrainingRepIndex);
+                }
+
+                if (mTrainingRepIndex >= TRAINING_TARGET_REPS) {
+                    completeDtwTraining();
+                } else {
+                    updateTrainingFeedback("Шаблон #" + mTrainingRepIndex + " сохранён. Повторите gesture...");
+                }
+            }
+        });
+    }
+
+    /** Called when all training repetitions are complete. */
+    private void completeDtwTraining() {
+        mTrainingFinished = true;
+        vibrateFeedback(140);
+        saveGestureTemplates();
+
+        final String gestureName;
+        switch (mActiveTrainingGesture) {
+            case TRAINING_OUTWARD: gestureName = "Вращение наружу"; break;
+            case TRAINING_INWARD: gestureName = "Вращение внутрь"; break;
+            case TRAINING_PINCH: gestureName = "Щипок"; break;
+            case TRAINING_FIST: gestureName = "Кулак"; break;
+            default: gestureName = "Жест"; break;
+        }
+
+        final String bannerText = "✅ DTW шаблон сохранён!\n" + gestureName + " (" + TRAINING_TARGET_REPS + " повторов)";
+        mMainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mTrainingSuccessBanner != null) {
+                    mTrainingSuccessBanner.setText(bannerText);
+                    mTrainingSuccessBanner.setVisibility(View.VISIBLE);
+                }
+                if (mTrainingRestartBtn != null) {
+                    mTrainingRestartBtn.setVisibility(View.VISIBLE);
+                }
+                updateTrainingFeedback("Распознавание DTW активно для этого жеста!");
+            }
+        });
+    }
+
+    // --- DTW Algorithm ---
+
+    /** Compute DTW distance between two normalized sample sequences. */
+    private float dtwDistance(float[][] a, int lenA, float[][] b, int lenB) {
+        float[][] dp = new float[lenA + 1][lenB + 1];
+        for (int i = 0; i <= lenA; i++) java.util.Arrays.fill(dp[i], Float.MAX_VALUE);
+        dp[0][0] = 0f;
+
+        for (int i = 1; i <= lenA; i++) {
+            for (int j = 1; j <= lenB; j++) {
+                float cost = sampleDistance(a[i - 1], b[j - 1]);
+                dp[i][j] = cost + Math.min(dp[i - 1][j], Math.min(dp[i][j - 1], dp[i - 1][j - 1]));
+            }
+        }
+        return dp[lenA][lenB] / (lenA + lenB);
+    }
+
+    /** Euclidean distance between two 6D samples. */
+    private float sampleDistance(float[] a, float[] b) {
+        float sum = 0f;
+        for (int i = 0; i < 6; i++) {
+            float d = a[i] - b[i];
+            sum += d * d;
+        }
+        return (float) Math.sqrt(sum);
+    }
+
+    /** Average frame-to-frame distance (motion energy). */
+    private float motionEnergy(float[][] samples, int count) {
+        if (count < 2) return 0f;
+        float total = 0f;
+        for (int i = 1; i < count; i++) {
+            total += sampleDistance(samples[i - 1], samples[i]);
+        }
+        return total / (count - 1);
+    }
+
+    /** Extract window samples in chronological order from circular buffer. */
+    private float[][] getWindowSamples(int count) {
+        float[][] result = new float[count][6];
+        int start = (mWindowIndex - count + WINDOW_SIZE) % WINDOW_SIZE;
+        for (int i = 0; i < count; i++) {
+            int idx = (start + i) % WINDOW_SIZE;
+            System.arraycopy(mSensorWindow[idx], 0, result[i], 0, 6);
+        }
+        return result;
+    }
+
+    /** Normalize samples to zero-mean, unit-variance per channel. */
+    private float[][] normalizeSamples(float[][] raw, int count) {
+        if (count == 0) return raw;
+
+        // Compute mean per channel
+        float[] mean = new float[6];
+        for (int i = 0; i < count; i++) {
+            for (int c = 0; c < 6; c++) {
+                mean[c] += raw[i][c];
+            }
+        }
+        for (int c = 0; c < 6; c++) mean[c] /= count;
+
+        // Compute RMS per channel
+        float[] rms = new float[6];
+        for (int i = 0; i < count; i++) {
+            for (int c = 0; c < 6; c++) {
+                float d = raw[i][c] - mean[c];
+                rms[c] += d * d;
+            }
+        }
+        for (int c = 0; c < 6; c++) {
+            rms[c] = (float) Math.sqrt(Math.max(0.001, rms[c] / count));
+        }
+
+        // Normalize
+        float[][] result = new float[count][6];
+        for (int i = 0; i < count; i++) {
+            for (int c = 0; c < 6; c++) {
+                result[i][c] = (raw[i][c] - mean[c]) / rms[c];
+            }
+        }
+        return result;
+    }
+
+    // --- Template Persistence (SharedPreferences) ---
+
+    private void saveGestureTemplates() {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            StringBuilder sb = new StringBuilder();
+
+            for (Map.Entry<Integer, List<float[][]>> entry : mGestureTemplates.entrySet()) {
+                int gestureType = entry.getKey();
+                List<float[][]> templates = entry.getValue();
+                if (templates == null || templates.isEmpty()) continue;
+
+                for (int t = 0; t < templates.size(); t++) {
+                    float[][] template = templates.get(t);
+                    sb.append(gestureType).append(":").append(t).append("=");
+                    sb.append(template.length);
+                    for (float[] sample : template) {
+                        for (int c = 0; c < 6; c++) {
+                            sb.append(",").append(sample[c]);
+                        }
+                    }
+                    sb.append(";");
+                }
+            }
+            editor.putString("dtw_templates", sb.toString());
+            editor.apply();
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to save DTW templates: " + t.getMessage());
+        }
+    }
+
+    private void loadGestureTemplates() {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String data = prefs.getString("dtw_templates", "");
+            if (data.isEmpty()) return;
+
+            mGestureTemplates.clear();
+            String[] entries = data.split(";");
+            for (String entry : entries) {
+                if (entry.isEmpty()) continue;
+                int eqIdx = entry.indexOf('=');
+                if (eqIdx < 0) continue;
+
+                String key = entry.substring(0, eqIdx); // "gestureType:templateIdx"
+                String values = entry.substring(eqIdx + 1);
+
+                int colonIdx = key.indexOf(':');
+                if (colonIdx < 0) continue;
+                int gestureType = Integer.parseInt(key.substring(0, colonIdx));
+
+                String[] nums = values.split(",");
+                int sampleCount = Integer.parseInt(nums[0]);
+                float[][] template = new float[sampleCount][6];
+                for (int i = 0; i < sampleCount; i++) {
+                    for (int c = 0; c < 6; c++) {
+                        template[i][c] = Float.parseFloat(nums[1 + i * 6 + c]);
+                    }
+                }
+
+                if (!mGestureTemplates.containsKey(gestureType)) {
+                    mGestureTemplates.put(gestureType, new ArrayList<>());
+                }
+                mGestureTemplates.get(gestureType).add(template);
+            }
+            Log.d(TAG, "Loaded DTW templates: " + mGestureTemplates.size() + " gesture types");
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to load DTW templates: " + t.getMessage());
+        }
+    }
+
+    private void updateTrainingFeedback(String msg) {
+        if (mTrainingLiveFeedbackText != null) {
+            mTrainingLiveFeedbackText.setText(msg);
         }
     }
 
