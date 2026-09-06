@@ -184,6 +184,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             mPinchThreshold = prefs.getFloat("pinch_thresh", 2.2f);
             mClenchThreshold = prefs.getFloat("clench_thresh", 3.0f);
             mHapticsEnabled = prefs.getBoolean("haptics", true);
+            mFistGuardEnabled = prefs.getBoolean("fist_guard", true);
         } catch (Throwable ignored) {}
     }
 
@@ -196,6 +197,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             editor.putFloat("pinch_thresh", mPinchThreshold);
             editor.putFloat("clench_thresh", mClenchThreshold);
             editor.putBoolean("haptics", mHapticsEnabled);
+            editor.putBoolean("fist_guard", mFistGuardEnabled);
             editor.apply();
         } catch (Throwable ignored) {}
     }
@@ -684,12 +686,12 @@ public class MainActivity extends Activity implements SensorEventListener {
             view -> mSettingsPinchText = view
         ));
 
-        // Clench Threshold Row
-        layout.addView(createSettingRow("Порог кулака:", String.format(Locale.US, "%.1f g", mClenchThreshold),
+        // Clench Activation Threshold Row
+        layout.addView(createSettingRow("Активация (кулак):", String.format(Locale.US, "%.1f g", mClenchThreshold),
             new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mClenchThreshold = Math.max(1.5f, mClenchThreshold - 0.3f);
+                    mClenchThreshold = Math.max(1.8f, mClenchThreshold - 0.3f);
                     savePreferences();
                     mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
                     vibrateFeedback(20);
@@ -707,6 +709,28 @@ public class MainActivity extends Activity implements SensorEventListener {
             view -> mSettingsClenchText = view
         ));
 
+        // Fist Guard Toggle (Защита от ложных срабатываний)
+        mSettingsFistGuardBtn = new Button(this);
+        updateFistGuardButtonText();
+        mSettingsFistGuardBtn.setTextSize(10);
+        mSettingsFistGuardBtn.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, dp(15)));
+        mSettingsFistGuardBtn.setTextColor(0xFFE2E8F0);
+        mSettingsFistGuardBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mFistGuardEnabled = !mFistGuardEnabled;
+                savePreferences();
+                updateFistGuardButtonText();
+                vibrateFeedback(40);
+                if (mTileLastGestureText != null) {
+                    mTileLastGestureText.setText(mFistGuardEnabled ? "🛡️ Защита: сожмите кулак" : "Свободный режим");
+                }
+            }
+        });
+        LinearLayout.LayoutParams guardP = new LinearLayout.LayoutParams(dp(156), dp(32));
+        guardP.setMargins(0, dp(4), 0, dp(4));
+        layout.addView(mSettingsFistGuardBtn, guardP);
+
         // Haptic feedback toggle
         mSettingsHapticBtn = new Button(this);
         updateHapticButtonText();
@@ -723,7 +747,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
         });
         LinearLayout.LayoutParams hapticP = new LinearLayout.LayoutParams(dp(140), dp(32));
-        hapticP.setMargins(0, dp(6), 0, dp(6));
+        hapticP.setMargins(0, dp(4), 0, dp(6));
         layout.addView(mSettingsHapticBtn, hapticP);
 
         // Open Gesture Training & Calibration Button
@@ -817,6 +841,11 @@ public class MainActivity extends Activity implements SensorEventListener {
         mSettingsHapticBtn.setText(mHapticsEnabled ? "Виброотклик: ВКЛ" : "Виброотклик: ВЫКЛ");
     }
 
+    private void updateFistGuardButtonText() {
+        if (mSettingsFistGuardBtn == null) return;
+        mSettingsFistGuardBtn.setText(mFistGuardEnabled ? "🛡️ Защита кулаком: ВКЛ" : "🛡️ Защита кулаком: ВЫКЛ");
+    }
+
     // --------------------------------------------------
     // SCREEN 3: GESTURE TRAINING & CALIBRATION (Обучение)
     // --------------------------------------------------
@@ -864,7 +893,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             @Override
             public void run() { startGestureTraining(TRAINING_PINCH); }
         }));
-        mTrainingMenuLayout.addView(createTrainingChoiceButton("✊ Громкость+ (Кулак)", new Runnable() {
+        mTrainingMenuLayout.addView(createTrainingChoiceButton("✊ Активация (Кулак)", new Runnable() {
             @Override
             public void run() { startGestureTraining(TRAINING_FIST); }
         }));
@@ -1046,8 +1075,8 @@ public class MainActivity extends Activity implements SensorEventListener {
                 mTrainingInstructionText.setText("Сделайте четкий щипок пальцами");
                 break;
             case TRAINING_FIST:
-                mTrainingGestureTitle.setText("✊ Сжатие в кулак");
-                mTrainingInstructionText.setText("Энергично сожмите кисть в кулак");
+                mTrainingGestureTitle.setText("✊ Активация (Кулак)");
+                mTrainingInstructionText.setText("Энергично сожмите кисть в кулак для активации");
                 break;
         }
         vibrateFeedback(40);
@@ -1104,7 +1133,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             if (mSettingsPinchText != null) mSettingsPinchText.setText(String.format(Locale.US, "%.1f g", mPinchThreshold));
         } else if (mActiveTrainingGesture == TRAINING_FIST) {
             mClenchThreshold = Math.max(2.0f, Math.min(4.8f, avg * 0.85f));
-            resultMsg = String.format(Locale.US, "Порог кулака: %.1f g", mClenchThreshold);
+            resultMsg = String.format(Locale.US, "Порог активации (кулак): %.1f g", mClenchThreshold);
             if (mSettingsClenchText != null) mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
         }
 
@@ -1307,7 +1336,14 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
 
         if (rotationSpeed > threshold) {
+            // Guard: block false triggers if fist activation is required and watch is not armed
+            if (mFistGuardEnabled && (!mIsArmed || now > mArmedUntilTime)) {
+                notifyActivationNeeded();
+                return;
+            }
+
             mLastGestureTriggerTime = now;
+            mArmedUntilTime = now + ARM_GUARD_WINDOW_MS; // keep armed window active
 
             if (isOutward) {
                 // Twist outward -> Next track
@@ -1325,29 +1361,74 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (now - mLastGestureTriggerTime < GESTURE_COOLDOWN_MS) return;
 
         float totalG = (float) Math.sqrt(ax * ax + ay * ay + az * az) / 9.80665f;
+        float gyroMag = (float) Math.sqrt(mLastGx * mLastGx + mLastGy * mLastGy + mLastGz * mLastGz);
 
         if (mActiveTrainingGesture != TRAINING_NONE && !mTrainingFinished) {
             if (mActiveTrainingGesture == TRAINING_PINCH && totalG > 1.5f && totalG < 3.2f) {
                 recordTrainingRepetition(totalG, "Щипок пальцами");
                 return;
             } else if (mActiveTrainingGesture == TRAINING_FIST && totalG >= 2.4f) {
-                recordTrainingRepetition(totalG, "Сжатие кулака");
+                recordTrainingRepetition(totalG, "Активация (кулак)");
                 return;
             }
         }
 
-        if (totalG > mPinchThreshold && totalG < mClenchThreshold) {
+        // FIST CLENCH -> ACTIVATION of the application!
+        // Arms the system for 12 seconds so media gestures can be performed safely without false triggers!
+        if (totalG >= mClenchThreshold && gyroMag < 2.0f) {
             mLastGestureTriggerTime = now;
+            mIsArmed = true;
+            mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+            vibrateDoublePulse();
+            triggerGestureAction("Сжатие кулака", "🔓 Взведено (12с)", -1);
+            return;
+        }
+
+        if (totalG > mPinchThreshold && totalG < mClenchThreshold) {
+            // Guard: block false triggers if fist activation is required and watch is not armed
+            if (mFistGuardEnabled && (!mIsArmed || now > mArmedUntilTime)) {
+                notifyActivationNeeded();
+                return;
+            }
+
+            mLastGestureTriggerTime = now;
+            mArmedUntilTime = now + ARM_GUARD_WINDOW_MS; // keep armed window active
             // Quick pinch snap -> Play/Pause
             mIsPlaying = !mIsPlaying;
             if (mPlayerPlayPauseBtn != null) mPlayerPlayPauseBtn.setText(mIsPlaying ? "⏸" : "▶");
             triggerGestureAction("Щипок пальцами", mIsPlaying ? "Воспроизведение" : "Пауза", KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
-        } else if (totalG >= mClenchThreshold) {
-            mLastGestureTriggerTime = now;
-            // Clench fist -> raise volume
-            adjustVolume(1);
-            triggerGestureAction("Сжатие кулака", "Громкость +", -1);
         }
+    }
+
+    private void notifyActivationNeeded() {
+        mMainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mTileLastGestureText != null) {
+                    mTileLastGestureText.setText("🛡️ Защита: сожмите кулак");
+                }
+                if (mSensorsTriggerAlert != null) {
+                    mSensorsTriggerAlert.setText("🛡️ Сожмите кулак для активации");
+                }
+            }
+        });
+    }
+
+    private void vibrateDoublePulse() {
+        if (!mHapticsEnabled) return;
+        try {
+            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (v != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v.vibrate(VibrationEffect.createWaveform(new long[]{0, 50, 60, 80}, -1));
+                    return;
+                } else {
+                    v.vibrate(new long[]{0, 50, 60, 80}, -1);
+                    return;
+                }
+            }
+        } catch (Throwable ignored) {}
+        vibrateFeedback(90);
     }
 
     private void triggerGestureAction(final String gestureName, final String actionName, final int keycode) {

@@ -10,5 +10,7 @@ dist/
 # Allow prebuilt release APKs in root
 !/gesture-music-wear.apk
 !/app-debug.apk
+bun.lock
+*.keystore*
 
 
