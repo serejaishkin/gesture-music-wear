@@ -350,7 +350,7 @@ export function App() {
                   <strong className="text-neutral-200">Виброотклик (Haptic Feedback)</strong>: Аппаратная вибрация часов через AndroidBridge ({settings.vibrationIntensity}, {settings.vibrationDuration} мс) с возможностью отключения.
                 </li>
                 <li>
-                  <strong className="text-neutral-200">WristRotationDetector</strong>: Фильтр нижних частот, интегрирование гироскопа X ({settings.angleThreshold}°).
+                  <strong className="text-neutral-200">WristRotationDetector</strong>: Универсальный детектор поворота — автоопределение доминантной оси (X/Y), фильтр нижних частот, трапецеидальное интегрирование ({settings.angleThreshold}°).
                 </li>
                 <li>
                   <strong className="text-neutral-200">DoublePinch & Fist</strong>: Конечно-автоматный детектор двойного щипка и сжатия кулака.

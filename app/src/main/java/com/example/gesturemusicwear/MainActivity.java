@@ -65,8 +65,15 @@ public class MainActivity extends Activity implements SensorEventListener {
     // Sensor processing state
     private float mLastGx = 0f, mLastGy = 0f, mLastGz = 0f;
     private float mLastAx = 0f, mLastAy = 0f, mLastAz = 0f;
-    private long mLastGestureTriggerTime = 0L;
+    private long mLastGestureTimestamp = 0L;
     private static final long GESTURE_COOLDOWN_MS = 650L;
+    private static final long CROSS_GESTURE_DEBOUNCE_MS = 300L;
+    private long mLastGuardNotifyTime = 0L;
+
+    // Gesture detectors
+    private WristRotationDetector mWristDetector;
+    private DoublePinchDetector mPinchDetector;
+    private FistClenchDetector mFistDetector;
 
     // Audio manager for real media control
     private AudioManager mAudioManager;
@@ -103,6 +110,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private TextView mSettingsClenchText;
     private Button mSettingsHapticBtn;
     private ScrollView mSettingsScrollView;
+    private ScrollView mTileScrollView;
 
     // Screen 3: Gesture Training & Calibration views
     private static final int TRAINING_NONE = 0;
@@ -116,6 +124,15 @@ public class MainActivity extends Activity implements SensorEventListener {
     private static final int TRAINING_TARGET_REPS = 5;
     private float mTrainingAccumulatedSum = 0f;
     private boolean mTrainingFinished = false;
+
+    // Training confirm buffer (manual confirmation, avoids noise)
+    private static final int TRAINING_BUFFER_SIZE = 24;
+    private float[] mTrainingBufferValue = new float[TRAINING_BUFFER_SIZE];
+    private long[] mTrainingBufferTime = new long[TRAINING_BUFFER_SIZE];
+    private boolean[] mTrainingBufferValidDir = new boolean[TRAINING_BUFFER_SIZE];
+    private int mTrainingBufferCount = 0;
+    private int mTrainingBufferHead = 0;
+    private Button mTrainingConfirmBtn;
 
     private ScrollView mTrainingScrollView;
     private LinearLayout mTrainingMenuLayout;
@@ -151,6 +168,8 @@ public class MainActivity extends Activity implements SensorEventListener {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
             loadPreferences();
+
+            initDetectors();
 
             mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -200,6 +219,29 @@ public class MainActivity extends Activity implements SensorEventListener {
             editor.putBoolean("fist_guard", mFistGuardEnabled);
             editor.apply();
         } catch (Throwable ignored) {}
+    }
+
+    private void initDetectors() {
+        mWristDetector = new WristRotationDetector(
+            mAngleThreshold, 1.2f, 120, 900, GESTURE_COOLDOWN_MS,
+            700, 0.35f, 180, 24.0f, mIsLeftHand
+        );
+        mPinchDetector = new DoublePinchDetector(
+            mPinchThreshold, -(mPinchThreshold * 0.6f),
+            4.0f, 900, GESTURE_COOLDOWN_MS, 2.5f
+        );
+        mFistDetector = new FistClenchDetector(
+            mClenchThreshold, 1200, 1.8f
+        );
+    }
+
+    private void updateDetectors() {
+        if (mWristDetector != null)
+            mWristDetector.updateSettings(mAngleThreshold, GESTURE_COOLDOWN_MS, mIsLeftHand, 120, 900);
+        if (mPinchDetector != null)
+            mPinchDetector.updateSettings(mPinchThreshold, GESTURE_COOLDOWN_MS);
+        if (mFistDetector != null)
+            mFistDetector.updateSettings(mClenchThreshold, 1200);
     }
 
     // ==========================================
@@ -298,11 +340,14 @@ public class MainActivity extends Activity implements SensorEventListener {
     // SCREEN 0: QUICK TILE (Главный экран / Плитка)
     // --------------------------------------------------
     private View createTileScreen() {
+        mTileScrollView = new ScrollView(this);
+        mTileScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        mTileScrollView.setVerticalScrollBarEnabled(false);
+
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER_HORIZONTAL);
-        // Vertical padding leaves room for top clock/dots (y < 42dp) and bottom curve
-        layout.setPadding(dp(20), dp(44), dp(20), dp(12));
+        layout.setPadding(dp(20), dp(44), dp(20), dp(36));
 
         // Big Toggle Button: compact 124dp x 44dp to fit perfectly in circle
         mTilePowerButton = new Button(this);
@@ -321,7 +366,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 vibrateFeedback(45);
                 if (mSensorsActive) {
                     registerSensors();
-                    mTileLastGestureText.setText("Жесты активны");
+                    mTileLastGestureText.setText(mFistGuardEnabled ? "✊ Активация: сожмите кулак" : "👂 Постоянное слушание");
                 } else {
                     unregisterSensors();
                     mTileLastGestureText.setText("Жесты отключены");
@@ -350,6 +395,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             public void onClick(View v) {
                 mIsLeftHand = !mIsLeftHand;
                 savePreferences();
+                updateDetectors();
                 updateHandButtonText(mTileHandButton);
                 if (mSettingsHandBtn != null) updateHandButtonText(mSettingsHandBtn);
                 vibrateFeedback(30);
@@ -407,7 +453,8 @@ public class MainActivity extends Activity implements SensorEventListener {
         navBar.addView(toSettingsBtn);
         layout.addView(navBar);
 
-        return layout;
+        mTileScrollView.addView(layout);
+        return mTileScrollView;
     }
 
     private void updateTileButtonAppearance() {
@@ -633,6 +680,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             public void onClick(View v) {
                 mIsLeftHand = !mIsLeftHand;
                 savePreferences();
+                updateDetectors();
                 updateHandButtonText(mSettingsHandBtn);
                 if (mTileHandButton != null) updateHandButtonText(mTileHandButton);
                 vibrateFeedback(30);
@@ -647,6 +695,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 public void onClick(View v) {
                     mAngleThreshold = Math.max(20f, mAngleThreshold - 5f);
                     savePreferences();
+                    updateDetectors();
                     mSettingsAngleText.setText(((int)mAngleThreshold) + "°");
                     vibrateFeedback(20);
                 }
@@ -656,6 +705,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 public void onClick(View v) {
                     mAngleThreshold = Math.min(80f, mAngleThreshold + 5f);
                     savePreferences();
+                    updateDetectors();
                     mSettingsAngleText.setText(((int)mAngleThreshold) + "°");
                     vibrateFeedback(20);
                 }
@@ -670,6 +720,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 public void onClick(View v) {
                     mPinchThreshold = Math.max(1.2f, mPinchThreshold - 0.2f);
                     savePreferences();
+                    updateDetectors();
                     mSettingsPinchText.setText(String.format(Locale.US, "%.1f g", mPinchThreshold));
                     vibrateFeedback(20);
                 }
@@ -679,6 +730,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 public void onClick(View v) {
                     mPinchThreshold = Math.min(4.0f, mPinchThreshold + 0.2f);
                     savePreferences();
+                    updateDetectors();
                     mSettingsPinchText.setText(String.format(Locale.US, "%.1f g", mPinchThreshold));
                     vibrateFeedback(20);
                 }
@@ -693,6 +745,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 public void onClick(View v) {
                     mClenchThreshold = Math.max(1.8f, mClenchThreshold - 0.3f);
                     savePreferences();
+                    updateDetectors();
                     mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
                     vibrateFeedback(20);
                 }
@@ -702,6 +755,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 public void onClick(View v) {
                     mClenchThreshold = Math.min(5.0f, mClenchThreshold + 0.3f);
                     savePreferences();
+                    updateDetectors();
                     mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
                     vibrateFeedback(20);
                 }
@@ -709,7 +763,9 @@ public class MainActivity extends Activity implements SensorEventListener {
             view -> mSettingsClenchText = view
         ));
 
-        // Fist Guard Toggle (Защита от ложных срабатываний)
+        // Gesture Listening Mode Toggle (Режим прослушивания жестов)
+        // "Постоянное слушание" — медиа-жесты работают всегда без активации
+        // "Через жест кулака" — сначала сжать кулак, затем 12с медиа-жесты
         mSettingsFistGuardBtn = new Button(this);
         updateFistGuardButtonText();
         mSettingsFistGuardBtn.setTextSize(10);
@@ -723,13 +779,21 @@ public class MainActivity extends Activity implements SensorEventListener {
                 updateFistGuardButtonText();
                 vibrateFeedback(40);
                 if (mTileLastGestureText != null) {
-                    mTileLastGestureText.setText(mFistGuardEnabled ? "🛡️ Защита: сожмите кулак" : "Свободный режим");
+                    mTileLastGestureText.setText(mFistGuardEnabled ? "✊ Активация: сожмите кулак" : "👂 Постоянное слушание");
                 }
             }
         });
-        LinearLayout.LayoutParams guardP = new LinearLayout.LayoutParams(dp(156), dp(32));
-        guardP.setMargins(0, dp(4), 0, dp(4));
+        LinearLayout.LayoutParams guardP = new LinearLayout.LayoutParams(dp(180), dp(32));
+        guardP.setMargins(0, dp(4), 0, dp(2));
         layout.addView(mSettingsFistGuardBtn, guardP);
+
+        TextView guardHint = new TextView(this);
+        guardHint.setTextColor(0xFF64748B);
+        guardHint.setTextSize(9);
+        guardHint.setGravity(Gravity.CENTER);
+        guardHint.setText("Постоянное слушание — жесты всегда активны.\nЧерез кулак — сначала сжать кулак (12с).");
+        guardHint.setPadding(0, 0, 0, dp(6));
+        layout.addView(guardHint);
 
         // Haptic feedback toggle
         mSettingsHapticBtn = new Button(this);
@@ -843,7 +907,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private void updateFistGuardButtonText() {
         if (mSettingsFistGuardBtn == null) return;
-        mSettingsFistGuardBtn.setText(mFistGuardEnabled ? "🛡️ Защита кулаком: ВКЛ" : "🛡️ Защита кулаком: ВЫКЛ");
+        mSettingsFistGuardBtn.setText(mFistGuardEnabled ? "✊ Режим: через кулак" : "👂 Режим: постоянное слушание");
     }
 
     // --------------------------------------------------
@@ -941,6 +1005,21 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingLiveFeedbackText.setGravity(Gravity.CENTER);
         mTrainingLiveFeedbackText.setText("Ожидание движения...");
         mTrainingActiveLayout.addView(mTrainingLiveFeedbackText);
+
+        mTrainingConfirmBtn = new Button(this);
+        mTrainingConfirmBtn.setText("✓ Подтвердить");
+        mTrainingConfirmBtn.setTextSize(12);
+        mTrainingConfirmBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        mTrainingConfirmBtn.setTextColor(0xFF000000);
+        mTrainingConfirmBtn.setBackground(createPillDrawable(0xFF22C55E, 0xFF16A34A, dp(16)));
+        mTrainingConfirmBtn.setVisibility(View.GONE);
+        mTrainingConfirmBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { confirmTrainingRepetition(); }
+        });
+        LinearLayout.LayoutParams confirmP = new LinearLayout.LayoutParams(dp(160), dp(36));
+        confirmP.setMargins(0, dp(6), 0, dp(6));
+        mTrainingActiveLayout.addView(mTrainingConfirmBtn, confirmP);
 
         mTrainingSuccessBanner = new TextView(this);
         mTrainingSuccessBanner.setTextColor(0xFF22C55E);
@@ -1047,22 +1126,25 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingRepsCompleted = 0;
         mTrainingAccumulatedSum = 0f;
         mTrainingFinished = false;
+        mTrainingBufferCount = 0;
+        mTrainingBufferHead = 0;
 
         mTrainingMenuLayout.setVisibility(View.GONE);
         mTrainingActiveLayout.setVisibility(View.VISIBLE);
         mTrainingSuccessBanner.setVisibility(View.GONE);
         mTrainingRestartBtn.setVisibility(View.GONE);
+        mTrainingConfirmBtn.setVisibility(View.VISIBLE);
 
         mTrainingProgressBar.setProgress(0);
         mTrainingRepsCounter.setText("0 / " + TRAINING_TARGET_REPS);
-        mTrainingLiveFeedbackText.setText("Ожидание движения...");
+        mTrainingLiveFeedbackText.setText("Сделайте движение и нажмите Подтвердить");
 
         switch (gesture) {
             case TRAINING_OUTWARD:
                 mTrainingGestureTitle.setText("🔄 Вращение наружу");
                 mTrainingInstructionText.setText(mIsLeftHand
-                    ? "Поверните кисть влево от себя"
-                    : "Поверните кисть вправо от себя");
+                    ? "Поверните кисть влево от себя, затем Подтвердить"
+                    : "Поверните кисть вправо от себя, затем Подтвердить");
                 break;
             case TRAINING_INWARD:
                 mTrainingGestureTitle.setText("🔄 Вращение внутрь");
@@ -1072,11 +1154,11 @@ public class MainActivity extends Activity implements SensorEventListener {
                 break;
             case TRAINING_PINCH:
                 mTrainingGestureTitle.setText("✌️ Щипок пальцами");
-                mTrainingInstructionText.setText("Сделайте четкий щипок пальцами");
+                mTrainingInstructionText.setText("Сделайте четкий щипок пальцами, затем нажмите Подтвердить");
                 break;
             case TRAINING_FIST:
                 mTrainingGestureTitle.setText("✊ Активация (Кулак)");
-                mTrainingInstructionText.setText("Энергично сожмите кисть в кулак для активации");
+                mTrainingInstructionText.setText("Энергично сожмите кисть в кулак, затем нажмите Подтвердить");
                 break;
         }
         vibrateFeedback(40);
@@ -1087,11 +1169,12 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingFinished = false;
         mTrainingMenuLayout.setVisibility(View.VISIBLE);
         mTrainingActiveLayout.setVisibility(View.GONE);
+        if (mTrainingConfirmBtn != null) mTrainingConfirmBtn.setVisibility(View.GONE);
         vibrateFeedback(25);
     }
 
     private void recordTrainingRepetition(float val, final String name) {
-        mLastGestureTriggerTime = System.currentTimeMillis();
+        mLastGestureTimestamp = System.currentTimeMillis();
         mTrainingRepsCompleted++;
         mTrainingAccumulatedSum += val;
         vibrateFeedback(60);
@@ -1110,6 +1193,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 }
 
                 if (mTrainingRepsCompleted >= TRAINING_TARGET_REPS) {
+                    if (mTrainingConfirmBtn != null) mTrainingConfirmBtn.setVisibility(View.GONE);
                     completeTraining();
                 }
             }
@@ -1138,6 +1222,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
 
         savePreferences();
+        updateDetectors();
 
         final String bannerText = "✅ Жест откалиброван!\n" + resultMsg;
         mMainHandler.post(new Runnable() {
@@ -1226,6 +1311,9 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (mCurrentScreen == 1) {
             // Screen 1: Player -> Adjust volume up/down
             adjustVolume(delta > 0 ? 1 : -1);
+        } else if (mCurrentScreen == 0 && mTileScrollView != null) {
+            // Screen 0: Tile -> Scroll content
+            mTileScrollView.smoothScrollBy(0, (int) (delta * 80));
         } else if (mCurrentScreen == 2 && mSettingsScrollView != null) {
             // Screen 2: Settings -> Scroll content
             mSettingsScrollView.smoothScrollBy(0, (int) (delta * 80));
@@ -1292,6 +1380,9 @@ public class MainActivity extends Activity implements SensorEventListener {
         try {
             mSensorManager.unregisterListener(this);
         } catch (Throwable ignored) {}
+        if (mWristDetector != null) mWristDetector.reset();
+        if (mPinchDetector != null) mPinchDetector.reset();
+        if (mFistDetector != null) mFistDetector.reset();
     }
 
     @Override
@@ -1302,102 +1393,165 @@ public class MainActivity extends Activity implements SensorEventListener {
             mLastGx = event.values[0];
             mLastGy = event.values[1];
             mLastGz = event.values[2];
-            processRotationalGesture(mLastGx, mLastGy, mLastGz);
         } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             mLastAx = event.values[0];
             mLastAy = event.values[1];
             mLastAz = event.values[2];
-            processAccelerationGesture(mLastAx, mLastAy, mLastAz);
         }
 
+        processSensors(System.currentTimeMillis(), mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz);
         updateLiveSensorsUI();
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
-    // Wrist twist detection
-    private void processRotationalGesture(float gx, float gy, float gz) {
-        long now = System.currentTimeMillis();
-        if (now - mLastGestureTriggerTime < GESTURE_COOLDOWN_MS) return;
-
-        float rotationSpeed = (float) Math.toDegrees(Math.abs(gy));
-        float threshold = mAngleThreshold * 4.0f; // Angular velocity threshold (deg/s)
-        boolean isOutward = mIsLeftHand ? (gy < 0) : (gy > 0);
-
+    // ==========================================
+    // HARDWARE SENSOR PROCESSING & GESTURE ENGINE
+    // ==========================================
+    private synchronized void processSensors(long now, float gx, float gy, float gz,
+                                             float ax, float ay, float az) {
         if (mActiveTrainingGesture != TRAINING_NONE && !mTrainingFinished) {
-            if (mActiveTrainingGesture == TRAINING_OUTWARD && isOutward && rotationSpeed > mAngleThreshold * 2.2f) {
-                recordTrainingRepetition(rotationSpeed, "Вращение наружу");
-                return;
-            } else if (mActiveTrainingGesture == TRAINING_INWARD && !isOutward && rotationSpeed > mAngleThreshold * 2.2f) {
-                recordTrainingRepetition(rotationSpeed, "Вращение внутрь");
+            processTraining(now, gx, gy, gz, ax, ay, az);
+            return;
+        }
+
+        if (now - mLastGestureTimestamp < CROSS_GESTURE_DEBOUNCE_MS) return;
+
+        if (mFistGuardEnabled) {
+            int fist = mFistDetector.process(now, gx, gy, gz, ax, ay, az);
+            if (fist == FistClenchDetector.RESULT_ACTIVATE) {
+                mLastGestureTimestamp = now;
+                mIsArmed = true;
+                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+                vibrateDoublePulse();
+                triggerGestureAction("Сжатие кулака", "🔓 Взведено (12с)", -1);
                 return;
             }
         }
 
-        if (rotationSpeed > threshold) {
-            // Guard: block false triggers if fist activation is required and watch is not armed
-            if (mFistGuardEnabled && (!mIsArmed || now > mArmedUntilTime)) {
-                notifyActivationNeeded();
+        boolean canExecuteMedia = !mFistGuardEnabled || (mIsArmed && now <= mArmedUntilTime);
+        if (canExecuteMedia) {
+            int wrist = mWristDetector.process(now, gx, gy, gz, ax, ay, az);
+            if (wrist == WristRotationDetector.RESULT_NEXT) {
+                mLastGestureTimestamp = now;
+                mIsArmed = true;
+                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+                triggerGestureAction("Вращение наружу", "Следующий трек", KeyEvent.KEYCODE_MEDIA_NEXT);
+                return;
+            } else if (wrist == WristRotationDetector.RESULT_PREVIOUS) {
+                mLastGestureTimestamp = now;
+                mIsArmed = true;
+                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+                triggerGestureAction("Вращение внутрь", "Предыдущий трек", KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                 return;
             }
 
-            mLastGestureTriggerTime = now;
-            mArmedUntilTime = now + ARM_GUARD_WINDOW_MS; // keep armed window active
-
-            if (isOutward) {
-                // Twist outward -> Next track
-                triggerGestureAction("Вращение наружу", "Следующий трек", KeyEvent.KEYCODE_MEDIA_NEXT);
-            } else {
-                // Twist inward -> Previous track
-                triggerGestureAction("Вращение внутрь", "Предыдущий трек", KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+            int pinch = mPinchDetector.process(now, gx, gy, gz, ax, ay, az);
+            if (pinch == DoublePinchDetector.RESULT_PLAY_PAUSE) {
+                mLastGestureTimestamp = now;
+                mIsArmed = true;
+                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+                mIsPlaying = !mIsPlaying;
+                if (mPlayerPlayPauseBtn != null) mPlayerPlayPauseBtn.setText(mIsPlaying ? "⏸" : "▶");
+                triggerGestureAction("Двойной щипок", mIsPlaying ? "Воспроизведение" : "Пауза", KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+                return;
+            }
+        } else if (mFistGuardEnabled && (!mIsArmed || now > mArmedUntilTime)) {
+            if (now - mLastGuardNotifyTime > 2000) {
+                mLastGuardNotifyTime = now;
+                notifyActivationNeeded();
             }
         }
     }
 
-    // Double pinch & fist clench detection
-    private void processAccelerationGesture(float ax, float ay, float az) {
+    private void processTraining(long now, float gx, float gy, float gz,
+                                 float ax, float ay, float az) {
+        float value = 0f;
+        boolean validDir = true;
+
+        if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
+            value = (float) Math.toDegrees(Math.abs(gy));
+            boolean isOutward = mIsLeftHand ? (gy < 0) : (gy > 0);
+            validDir = (mActiveTrainingGesture == TRAINING_OUTWARD && isOutward)
+                    || (mActiveTrainingGesture == TRAINING_INWARD && !isOutward);
+        } else {
+            value = (float) Math.sqrt(ax * ax + ay * ay + az * az) / 9.80665f;
+        }
+
+        // Store in ring buffer
+        mTrainingBufferValue[mTrainingBufferHead] = value;
+        mTrainingBufferTime[mTrainingBufferHead] = now;
+        mTrainingBufferValidDir[mTrainingBufferHead] = validDir;
+        mTrainingBufferHead = (mTrainingBufferHead + 1) % TRAINING_BUFFER_SIZE;
+        if (mTrainingBufferCount < TRAINING_BUFFER_SIZE) mTrainingBufferCount++;
+
+        // Update live feedback
+        final boolean motionDetected = validDir && (
+            (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) && value > 80f
+            || mActiveTrainingGesture == TRAINING_PINCH && value > 1.3f
+            || mActiveTrainingGesture == TRAINING_FIST && value > 1.8f);
+        mMainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mTrainingLiveFeedbackText != null) {
+                    mTrainingLiveFeedbackText.setText(motionDetected
+                        ? "✔ Движение зафиксировано — нажмите Подтвердить"
+                        : "Делайте жест...");
+                }
+            }
+        });
+    }
+
+    private void confirmTrainingRepetition() {
+        if (mTrainingFinished || mActiveTrainingGesture == TRAINING_NONE) return;
+
         long now = System.currentTimeMillis();
-        if (now - mLastGestureTriggerTime < GESTURE_COOLDOWN_MS) return;
+        float bestValue = 0f;
+        boolean bestValidDir = true;
 
-        float totalG = (float) Math.sqrt(ax * ax + ay * ay + az * az) / 9.80665f;
-        float gyroMag = (float) Math.sqrt(mLastGx * mLastGx + mLastGy * mLastGy + mLastGz * mLastGz);
-
-        if (mActiveTrainingGesture != TRAINING_NONE && !mTrainingFinished) {
-            if (mActiveTrainingGesture == TRAINING_PINCH && totalG > 1.5f && totalG < 3.2f) {
-                recordTrainingRepetition(totalG, "Щипок пальцами");
-                return;
-            } else if (mActiveTrainingGesture == TRAINING_FIST && totalG >= 2.4f) {
-                recordTrainingRepetition(totalG, "Активация (кулак)");
-                return;
+        for (int i = 0; i < mTrainingBufferCount; i++) {
+            int idx = (mTrainingBufferHead - 1 - i + TRAINING_BUFFER_SIZE * 2) % TRAINING_BUFFER_SIZE;
+            long ts = mTrainingBufferTime[idx];
+            long age = now - ts;
+            // Use data from 100–500ms before the tap (avoids tap-induced shake)
+            if (age < 100) continue;
+            if (age > 500) break;
+            if (mTrainingBufferValue[idx] > bestValue) {
+                bestValue = mTrainingBufferValue[idx];
+                bestValidDir = mTrainingBufferValidDir[idx];
             }
         }
 
-        // FIST CLENCH -> ACTIVATION of the application!
-        // Arms the system for 12 seconds so media gestures can be performed safely without false triggers!
-        if (totalG >= mClenchThreshold && gyroMag < 2.0f) {
-            mLastGestureTriggerTime = now;
-            mIsArmed = true;
-            mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
-            vibrateDoublePulse();
-            triggerGestureAction("Сжатие кулака", "🔓 Взведено (12с)", -1);
+        // Minimum thresholds: reject idle or too-weak input
+        float minThreshold;
+        String errorText;
+        if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
+            minThreshold = 80f;
+            errorText = bestValidDir ? "Сделайте вращение активнее" : "Неверное направление, повторите";
+        } else if (mActiveTrainingGesture == TRAINING_PINCH) {
+            minThreshold = 1.3f;
+            errorText = "Сделайте щипок активнее";
+        } else {
+            minThreshold = 1.8f;
+            errorText = "Сожмите кисть сильнее";
+        }
+
+        if (bestValue < minThreshold || (!bestValidDir && (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD))) {
+            vibrateFeedback(25);
+            final String msg = errorText;
+            mMainHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (mTrainingLiveFeedbackText != null) {
+                        mTrainingLiveFeedbackText.setText("⚠ " + msg);
+                    }
+                }
+            });
             return;
         }
 
-        if (totalG > mPinchThreshold && totalG < mClenchThreshold) {
-            // Guard: block false triggers if fist activation is required and watch is not armed
-            if (mFistGuardEnabled && (!mIsArmed || now > mArmedUntilTime)) {
-                notifyActivationNeeded();
-                return;
-            }
-
-            mLastGestureTriggerTime = now;
-            mArmedUntilTime = now + ARM_GUARD_WINDOW_MS; // keep armed window active
-            // Quick pinch snap -> Play/Pause
-            mIsPlaying = !mIsPlaying;
-            if (mPlayerPlayPauseBtn != null) mPlayerPlayPauseBtn.setText(mIsPlaying ? "⏸" : "▶");
-            triggerGestureAction("Щипок пальцами", mIsPlaying ? "Воспроизведение" : "Пауза", KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
-        }
+        recordTrainingRepetition(bestValue, "Записано");
     }
 
     private void notifyActivationNeeded() {
@@ -1405,10 +1559,10 @@ public class MainActivity extends Activity implements SensorEventListener {
             @Override
             public void run() {
                 if (mTileLastGestureText != null) {
-                    mTileLastGestureText.setText("🛡️ Защита: сожмите кулак");
+                    mTileLastGestureText.setText("✊ Активация: сожмите кулак");
                 }
                 if (mSensorsTriggerAlert != null) {
-                    mSensorsTriggerAlert.setText("🛡️ Сожмите кулак для активации");
+                    mSensorsTriggerAlert.setText("✊ Сожмите кулак для активации");
                 }
             }
         });

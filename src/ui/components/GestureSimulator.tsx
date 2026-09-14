@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { gestureManager } from '../../gesture/GestureManager';
 import { EngineStrategy } from '../../types';
 
@@ -10,6 +10,7 @@ interface GestureSimulatorProps {
 export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, leftHand }) => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [activeGestureNote, setActiveGestureNote] = useState('');
+  const [isArmed, setIsArmed] = useState(gestureManager.isArmed);
   const [liveSensors, setLiveSensors] = useState({
     gyroX: 0,
     gyroY: 0,
@@ -20,6 +21,12 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
   });
 
   const lastDisplayTimeRef = useRef(0);
+
+  useEffect(() => {
+    return gestureManager.subscribe(() => {
+      setIsArmed(gestureManager.isArmed);
+    });
+  }, []);
 
   // Smoothly throttled UI sensor update (16 FPS UI refresh while physical sensor loop stays 50Hz)
   const updateSensorsUI = (
@@ -228,9 +235,20 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({ isRunning, l
             Эмулятор жестов & IMU сенсоров
           </h2>
         </div>
-        <span className="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-0.5 rounded-full">
-          Watch 4+ IMU
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`text-[9px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+              isArmed
+                ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
+                : 'bg-neutral-800 text-neutral-400 border border-white/5'
+            }`}
+          >
+            {isArmed ? '🔓 Взведено' : '🛡️ Охрана'}
+          </span>
+          <span className="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-0.5 rounded-full">
+            Watch 4+ IMU
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mt-2.5">

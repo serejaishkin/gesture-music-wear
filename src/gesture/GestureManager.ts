@@ -37,11 +37,15 @@ export class GestureManager {
   public strategyName: EngineStrategy = 'RawSensor (universal)';
   public saveMessage = '';
 
-  // Dynamic Gravity estimation for real hardware sensors (scalar primitives for zero-allocation performance)
+  // Dynamic Gravity estimation for real hardware sensors
   private gravX = 0;
   private gravY = 0;
   private gravZ = 9.8;
   private lastTrainingNotifyTime = 0;
+
+  // Cross-gesture debounce and suppression window
+  private lastGestureTimestamp = 0;
+  private static readonly CROSS_GESTURE_DEBOUNCE_MS = 300;
 
   // Training state
   public isTrainingMode = false;
@@ -51,29 +55,31 @@ export class GestureManager {
   public trainingDone = false;
   public trainingSuccess = false;
 
-  private lastGestureTime = 0;
   private subscribers: Array<() => void> = [];
   private motionListener: ((e: DeviceMotionEvent) => void) | null = null;
+
+  public get isArmed(): boolean {
+    return this.armingManager.isArmed;
+  }
 
   constructor() {
     this.settings = this.loadSettings();
     this.wristDetector = new WristRotationDetector(
       this.settings.angleThreshold,
-      2.2,
+      2.0,
       this.settings.minDuration,
       this.settings.maxDuration,
       this.settings.gestureCooldown,
       400,
       0.35,
       180,
-      20,
+      24,
       this.settings.leftHand
     );
     this.pinchDetector = new DoublePinchDetector(
       this.settings.pinchThreshold,
       -(this.settings.pinchThreshold * 0.6),
-      12.0,
-      5.5,
+      14.0,
       900,
       this.settings.gestureCooldown
     );
@@ -82,7 +88,7 @@ export class GestureManager {
       this.settings.gestureCooldown
     );
     this.trainer = new GestureTrainer();
-    this.armingManager = new GestureArmingManager();
+    this.armingManager = new GestureArmingManager(15000);
   }
 
   public subscribe(fn: () => void): () => void {
@@ -258,7 +264,7 @@ export class GestureManager {
   }
 
   private setupHardwareSensors() {
-    // 1. Check for native Android bridge sensors (Wear OS Galaxy Watch 4)
+    // 1. Check for native Android bridge sensors (Wear OS Galaxy Watch 4+)
     if (typeof window !== 'undefined') {
       const w = window as any;
       w.onAndroidSensorData = (gx: number, gy: number, gz: number, ax: number, ay: number, az: number) => {
@@ -283,16 +289,20 @@ export class GestureManager {
 
       if (!rot || !rawAcc) return;
 
-      // Web rotation rate is degrees/s; convert to radians/s for IMU matching
-      const gx = ((rot.alpha || 0) * Math.PI) / 180;
-      const gy = ((rot.beta || 0) * Math.PI) / 180;
-      const gz = ((rot.gamma || 0) * Math.PI) / 180;
+      // Official mapping:
+      // W3C DeviceMotionEvent beta -> rotation around X (pitch)
+      // W3C DeviceMotionEvent gamma -> rotation around Y (roll)
+      // W3C DeviceMotionEvent alpha -> rotation around Z (yaw)
+      // Convert degrees/sec to radians/sec for Android IMU standard
+      const gx = (((rot.beta !== null ? rot.beta : rot.alpha) || 0) * Math.PI) / 180;
+      const gy = (((rot.gamma !== null ? rot.gamma : rot.beta) || 0) * Math.PI) / 180;
+      const gz = (((rot.alpha !== null ? rot.alpha : rot.gamma) || 0) * Math.PI) / 180;
 
       let ax = 0;
       let ay = 0;
       let az = 0;
 
-      // If true linear acceleration is given by browser:
+      // If true linear acceleration is provided by device:
       if (
         event.acceleration &&
         (event.acceleration.x !== null || event.acceleration.y !== null || event.acceleration.z !== null)
@@ -301,7 +311,7 @@ export class GestureManager {
         ay = event.acceleration.y || 0;
         az = event.acceleration.z || 0;
       } else {
-        // High-pass filter to isolate linear acceleration from constant 1G gravity
+        // High-pass filter to isolate linear acceleration from 1G gravity
         const rx = rawAcc.x || 0;
         const ry = rawAcc.y || 0;
         const rz = rawAcc.z || 0;
@@ -360,7 +370,6 @@ export class GestureManager {
         }
         this.notify();
       } else if (timestamp - this.lastTrainingNotifyTime > 50) {
-        // Throttle UI notification to smooth 20 FPS during sensor sampling
         this.lastTrainingNotifyTime = timestamp;
         this.notify();
       }
@@ -369,13 +378,19 @@ export class GestureManager {
 
     if (!this.isRunning) return;
 
+    // Update the arming window expiration
     this.armingManager.update(timestamp);
 
-    // 1. Check learned DTW gestures first
+    // Cross-gesture lockout check
+    if (timestamp - this.lastGestureTimestamp < GestureManager.CROSS_GESTURE_DEBOUNCE_MS) {
+      return;
+    }
+
+    // 1. Check custom trained DTW gestures first
     const learned = this.trainer.recognize(gx, gy, gz, ax, ay, az);
     if (learned === GestureType.ACTIVATE) {
       this.armingManager.activate(timestamp);
-      this.lastGestureTime = timestamp;
+      this.lastGestureTimestamp = timestamp;
       this.triggerFeedback(this.settings.vibrationDuration * 2);
       this.dispatchGesture(learned);
       return;
@@ -390,6 +405,7 @@ export class GestureManager {
 
     // 2. Fall back to heuristic detectors
     if (!gesture) {
+      // A. Check Fist Clench for deliberate ACTIVATION/ARMING
       const fist = this.settings.fistClenchEnabled
         ? this.fistDetector.process(timestamp, gx, gy, gz, ax, ay, az)
         : null;
@@ -397,7 +413,7 @@ export class GestureManager {
       if (fist === GestureType.ACTIVATE) {
         gesture = fist;
       } else {
-        // Guard media gestures (wrist rotation & pinch) with fist activation to eliminate false triggers
+        // B. Media controls (Wrist rotation & Double pinch) are guarded by arming state
         const canExecuteMedia = !this.settings.fistClenchEnabled || this.armingManager.isArmed;
         if (canExecuteMedia) {
           const wrist = this.wristDetector.process(timestamp, gx, gy, gz, ax, ay, az);
@@ -413,19 +429,20 @@ export class GestureManager {
   }
 
   private handleDetectedGesture(gesture: GestureType, timestamp: number) {
+    this.lastGestureTimestamp = timestamp;
+
     if (gesture === GestureType.ACTIVATE) {
       this.armingManager.activate(timestamp);
-      this.lastGestureTime = timestamp;
       this.triggerFeedback(this.settings.vibrationDuration * 2);
       this.dispatchGesture(gesture);
       return;
     }
 
+    // Media action keeps the arming window alive
     this.armingManager.touch(timestamp);
-    this.lastGestureTime = timestamp;
     this.triggerFeedback(this.settings.vibrationDuration);
 
-    // Dispatch media controls
+    // Dispatch media actions
     if (gesture === GestureType.NEXT_TRACK) {
       audioPlayer.nextTrack();
     } else if (gesture === GestureType.PREVIOUS_TRACK) {

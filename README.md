@@ -5,8 +5,9 @@ Web-based recreation of the Galaxy Watch 4+ Wear OS gesture music controller, po
 ## Features
 
 - **Gesture Detection Algorithms**:
-  - **WristRotationDetector**: Real-time trapezoidal integration of Gyroscope X angular speed with low-pass filtering ($\alpha = 0.8$), angular thresholds, and anti-noise accelerometer gating.
-  - **DoublePinchDetector**: State-machine-based linear acceleration detection ($Z$-axis threshold check, quiet gyroscope guard, stable rearm cycle) to trigger Play/Pause.
+  - **WristRotationDetector**: Universal track-switch detector — automatic dominant-axis selection (Gyro X or Gyro Y), low-pass filtering ($\alpha = 0.75$), trapezoidal angle integration, peak-angular-speed gate, and 3D acceleration-magnitude anti-noise gating. Works across watch wearing orientations, hand sides, and Wear OS device manufacturers (standard Android Sensor API conventions: rad/s, m/s²).
+  - **DoublePinchDetector**: Universal, tilt-invariant play/pause detector using 3D acceleration magnitude (+ dedicated Z-axis sensitivity), quiet-gyroscope guard, and a robust two-pinch state machine with rebound and stable re-arm cycles.
+  - **FistClenchDetector**: Multi-axis shockwave discriminator distinguishes a deliberate fist clench (activation/arming gesture) from a single directional pinch spike.
   - **GestureTrainer (DTW)**: 5-repetition Dynamic Time Warping training engine with motion energy analysis and variance thresholds for learning custom gestures.
   - **GestureArmingManager**: Guard state with a 15-second activity timeout to prevent accidental gestures.
 - **Wear OS User Interface**:
@@ -22,10 +23,10 @@ Web-based recreation of the Galaxy Watch 4+ Wear OS gesture music controller, po
 
 | Gesture | Default Action | Algorithm |
 |---|---|---|
-| **Turn Wrist Right** | Next Track | `WristRotationDetector` (negative angle for right hand, positive for left) |
-| **Turn Wrist Left** | Previous Track | `WristRotationDetector` (positive angle for right hand, negative for left) |
-| **Double Pinch** | Play / Pause | `DoublePinchDetector` ($+3.5\,\mathrm{m/s^2}$ upward, $-2.5\,\mathrm{m/s^2}$ rebound) |
-| **Activation Gesture** | Disarm Guard (15s) | `GestureTrainer` DTW template / `GestureArmingManager` |
+| **Turn Wrist Right** | Next Track | `WristRotationDetector` — dominant-axis (X/Y) integration, optional left-hand sign mirroring |
+| **Turn Wrist Left** | Previous Track | `WristRotationDetector` — dominant-axis (X/Y) integration, optional left-hand sign mirroring |
+| **Double Pinch** | Play / Pause | `DoublePinchDetector` (tilt-invariant, 3D magnitude + Z-axis impulse, quiet-gyro guard) |
+| **Fist Clench** | Disarm Guard (15s) | `FistClenchDetector` (multi-axis shockwave) / `GestureTrainer` DTW / `GestureArmingManager` |
 
 ## Development & Build
 
