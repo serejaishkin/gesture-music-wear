@@ -153,8 +153,7 @@ public class WristRotationDetector {
             return RESULT_NONE;
         }
 
-        float effectiveThreshold = Math.min(angleThresholdDegrees * 0.6f, 40f);
-        if (effectiveThreshold < 15f) effectiveThreshold = 15f;
+        float effectiveThreshold = getEffectiveThreshold();
 
         if (leftHand) angleDegrees = -angleDegrees;
         lastAngleDegrees = angleDegrees;
@@ -174,6 +173,42 @@ public class WristRotationDetector {
     }
 
     public float getLastAngleDegrees() { return lastAngleDegrees; }
+
+    public float getEffectiveThreshold() {
+        float t = Math.min(angleThresholdDegrees * 0.6f, 40f);
+        if (t < 15f) t = 15f;
+        return t;
+    }
+
+    /** Current accumulated angle of the live window (for on-device diagnostics). */
+    public float getLiveAngleDegrees() {
+        if (samples.size() < 2) return 0;
+        float maxSpeedX = 0;
+        float maxSpeedY = 0;
+        for (Sample s : samples) {
+            if (Math.abs(s.gx) > maxSpeedX) maxSpeedX = Math.abs(s.gx);
+            if (Math.abs(s.gy) > maxSpeedY) maxSpeedY = Math.abs(s.gy);
+        }
+        boolean useAxisX = maxSpeedX >= maxSpeedY;
+        int pos = 0, neg = 0;
+        for (Sample s : samples) {
+            float v = useAxisX ? s.gx : s.gy;
+            if (v > idleThreshold) pos++;
+            else if (v < -idleThreshold) neg++;
+        }
+        boolean domPos = pos >= neg;
+        float integ = 0;
+        for (int i = 1; i < samples.size(); i++) {
+            float vCur = useAxisX ? samples.get(i).gx : samples.get(i).gy;
+            float vPrev = useAxisX ? samples.get(i - 1).gx : samples.get(i - 1).gy;
+            if (domPos ? (vCur < 0 && vPrev < 0) : (vCur > 0 && vPrev > 0)) continue;
+            float dt = (samples.get(i).timestamp - samples.get(i - 1).timestamp) / 1000f;
+            integ += ((vCur + vPrev) / 2f) * dt;
+        }
+        float deg = (float) Math.toDegrees(integ);
+        if (leftHand) deg = -deg;
+        return deg;
+    }
 
     public void reset() {
         resetWindow();

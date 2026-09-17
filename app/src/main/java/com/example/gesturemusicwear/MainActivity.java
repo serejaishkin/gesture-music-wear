@@ -1413,6 +1413,12 @@ public class MainActivity extends Activity implements SensorEventListener {
                                              float ax, float ay, float az) {
         if (mActiveTrainingGesture != TRAINING_NONE && !mTrainingFinished) {
             processTraining(now, gx, gy, gz, ax, ay, az);
+            // Keep wrist detector window warm so live angle is visible on screen 3
+            if (mWristDetector != null
+                    && (mActiveTrainingGesture == TRAINING_OUTWARD
+                        || mActiveTrainingGesture == TRAINING_INWARD)) {
+                mWristDetector.process(now, gx, gy, gz, ax, ay, az);
+            }
             return;
         }
 
@@ -1619,8 +1625,15 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (mCurrentScreen != 3) return;
 
         if (mSensorsGyroText != null) {
-            mSensorsGyroText.setText(String.format(Locale.US,
-                "Гиро: X:%+.1f Y:%+.1f Z:%+.1f rad/s", mLastGx, mLastGy, mLastGz));
+            String gyroLine = String.format(Locale.US,
+                "Гиро: X:%+.1f Y:%+.1f Z:%+.1f rad/s", mLastGx, mLastGy, mLastGz);
+            if (mWristDetector != null
+                    && (mActiveTrainingGesture == TRAINING_OUTWARD
+                        || mActiveTrainingGesture == TRAINING_INWARD)) {
+                gyroLine += String.format(Locale.US, "\nУгол: %+.0f° / порог %+.0f°",
+                    mWristDetector.getLiveAngleDegrees(), mWristDetector.getEffectiveThreshold());
+            }
+            mSensorsGyroText.setText(gyroLine);
         }
         if (mSensorsAccelText != null) {
             mSensorsAccelText.setText(String.format(Locale.US,
