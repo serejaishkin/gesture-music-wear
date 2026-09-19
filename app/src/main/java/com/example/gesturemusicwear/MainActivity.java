@@ -11,6 +11,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -36,6 +38,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends Activity implements SensorEventListener {
@@ -77,6 +80,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     // Audio manager for real media control
     private AudioManager mAudioManager;
+    private MediaSessionManager mMediaSessionManager;
     private boolean mIsPlaying = false;
 
     // UI state: 4 screens
@@ -172,6 +176,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             initDetectors();
 
             mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            mMediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
             mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
             if (mSensorManager != null) {
                 mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -1593,11 +1598,8 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private void triggerGestureAction(final String gestureName, final String actionName, final int keycode) {
         vibrateFeedback(60);
-        if (keycode > 0 && mAudioManager != null) {
-            try {
-                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
-                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keycode));
-            } catch (Throwable ignored) {}
+        if (keycode > 0) {
+            sendMediaKey(keycode);
         }
 
         mMainHandler.post(new Runnable() {
@@ -1619,6 +1621,45 @@ public class MainActivity extends Activity implements SensorEventListener {
                 }
             }
         });
+    }
+
+    /**
+     * Sends a media key to the currently active media session.
+     * - NEXT/PREVIOUS: prefer MediaController.skipToNext/Previous (reliable on Wear OS).
+     * - PLAY/PAUSE: prefer AudioManager.dispatchMediaKeyEvent (system toggle, knows real state).
+     */
+    private void sendMediaKey(final int keycode) {
+        boolean isToggle = keycode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                        || keycode == KeyEvent.KEYCODE_MEDIA_PLAY
+                        || keycode == KeyEvent.KEYCODE_MEDIA_PAUSE;
+
+        if (!isToggle && mMediaSessionManager != null) {
+            try {
+                List<MediaController> controllers = mMediaSessionManager.getActiveSessions(null);
+                if (controllers != null && !controllers.isEmpty()) {
+                    MediaController controller = controllers.get(0);
+                    if (controller != null) {
+                        MediaController.TransportControls tc = controller.getTransportControls();
+                        if (tc != null) {
+                            if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
+                                tc.skipToNext();
+                                return;
+                            } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
+                                tc.skipToPrevious();
+                                return;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        if (mAudioManager != null) {
+            try {
+                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
+                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keycode));
+            } catch (Throwable ignored) {}
+        }
     }
 
     private void updateLiveSensorsUI() {
