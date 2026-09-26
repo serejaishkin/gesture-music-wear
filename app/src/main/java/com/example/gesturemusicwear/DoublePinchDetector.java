@@ -10,13 +10,15 @@ import java.util.Iterator;
  * Requires two valid pinch impulses within a time window to fire,
  * preventing single-impulse false triggers from taps or bumps.
  * Gyroscope guard rejects during wrist rotation.
+ *
+ * Improved sensitivity with relaxed thresholds for better detection.
  */
 public class DoublePinchDetector {
     public static final int RESULT_NONE = 0;
     public static final int RESULT_PLAY_PAUSE = 1;
 
-    private static final long PINCH_TIMEOUT_MS = 450;
-    private static final long MIN_PINCH_INTERVAL_MS = 100;
+    private static final long PINCH_TIMEOUT_MS = 500; // increased from 450ms
+    private static final long MIN_PINCH_INTERVAL_MS = 80;  // reduced from 100ms
 
     private float thresholdUp;   // g-force
     private float thresholdDown; // g-force (negative)
@@ -87,7 +89,7 @@ public class DoublePinchDetector {
             if (timestamp - it.next() > windowMs) it.remove();
         }
 
-        boolean isImpulse = totalG >= thresholdUp && totalG <= maxTotalG;
+        boolean isImpulse = totalG >= thresholdUp * 0.9f && totalG <= maxTotalG; // reduced threshold by 10% for better sensitivity
 
         if (state == STATE_IDLE) {
             if (isImpulse) {

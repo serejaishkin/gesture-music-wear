@@ -175,8 +175,9 @@ public class WristRotationDetector {
     public float getLastAngleDegrees() { return lastAngleDegrees; }
 
     public float getEffectiveThreshold() {
-        float t = Math.min(angleThresholdDegrees * 0.6f, 40f);
-        if (t < 15f) t = 15f;
+        // Improved effective threshold calculation for better sensitivity
+        float t = Math.min(angleThresholdDegrees * 0.7f, 35f); // increased from 0.6f to 0.7f, reduced max from 40f to 35f
+        if (t < 12f) t = 12f; // reduced minimum from 15f to 12f
         return t;
     }
 

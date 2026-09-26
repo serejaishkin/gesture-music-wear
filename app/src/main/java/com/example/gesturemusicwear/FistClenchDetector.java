@@ -7,12 +7,18 @@ package com.example.gesturemusicwear;
  * Discriminates from a single pinch spike via multi-axis spread: a clench
  * produces a shockwave across several axes, while a pinch excites one axis.
  * Also detects rapid jerk onset as an alternative trigger.
+ *
+ * Improved thresholds for better detection on real devices:
+ * - Lower clench threshold (2.2g instead of 3.0g) for easier activation
+ * - Reduced spread threshold (1.5 m/s² instead of 2.0 m/s²) for better sensitivity
+ * - Lower jerk threshold (25.0 m/s³ instead of 42.0 m/s³) for faster detection
+ * - Improved settling logic for better user experience
  */
 public class FistClenchDetector {
     public static final int RESULT_NONE = 0;
     public static final int RESULT_ACTIVATE = 1;
 
-    private float clenchThreshold; // g-force (e.g. 3.0)
+    private float clenchThreshold; // g-force (e.g. 2.2)
     private long cooldownMs;
     private float maxGyroMagnitude; // rad/s
 
@@ -22,8 +28,8 @@ public class FistClenchDetector {
     private boolean isSettling = false;
     private long settleStartTime = 0;
 
-    private static final float SPREAD_THRESHOLD = 2.0f; // m/s² per axis
-    private static final float JERK_THRESHOLD = 42.0f;  // m/s³
+    private static final float SPREAD_THRESHOLD = 1.5f; // m/s² per axis (reduced from 2.0f)
+    private static final float JERK_THRESHOLD = 25.0f;  // m/s³ (reduced from 42.0f)
 
     public FistClenchDetector(float clenchThreshold, long cooldownMs, float maxGyroMagnitude) {
         this.clenchThreshold = clenchThreshold;
@@ -60,7 +66,8 @@ public class FistClenchDetector {
         prevTimestamp = timestamp;
 
         if (isSettling) {
-            if (totalG < clenchThreshold * 0.5f || timestamp - settleStartTime > 350) {
+            // Improved settling logic with longer timeout for better user experience
+            if (totalG < clenchThreshold * 0.4f || timestamp - settleStartTime > 500) {
                 isSettling = false;
             }
             return RESULT_NONE;
@@ -72,10 +79,14 @@ public class FistClenchDetector {
         if (Math.abs(accZ) > SPREAD_THRESHOLD) significantAxes++;
         boolean isBroadSpread = significantAxes >= 2;
 
+        // Improved trigger conditions with lower thresholds
         boolean isHighImpulse = totalG >= clenchThreshold && isBroadSpread;
-        boolean isSharpJerk = jerk >= JERK_THRESHOLD && totalG >= clenchThreshold * 0.6f && isBroadSpread;
+        boolean isSharpJerk = jerk >= JERK_THRESHOLD && totalG >= clenchThreshold * 0.5f && isBroadSpread;
 
-        if (isHighImpulse || isSharpJerk) {
+        // Additional condition: single-axis strong impulse (for less forceful clenches)
+        boolean isStrongSingleAxis = totalG >= clenchThreshold * 1.2f && significantAxes >= 1;
+
+        if (isHighImpulse || isSharpJerk || isStrongSingleAxis) {
             lastGestureTime = timestamp;
             isSettling = true;
             settleStartTime = timestamp;

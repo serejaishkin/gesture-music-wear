@@ -1,6 +1,6 @@
-# Gesture Music Wear (React)
+# Gesture Music Wear (Wear OS)
 
-Web-based recreation of the Galaxy Watch 4+ Wear OS gesture music controller, ported from Kotlin / Jetpack Compose to React, TypeScript, and Tailwind CSS.
+Wear OS gesture music controller for Galaxy Watch 4+ and other Wear OS devices. Control music playback on your phone using hand gestures from your smartwatch.
 
 ## Features
 
@@ -8,16 +8,15 @@ Web-based recreation of the Galaxy Watch 4+ Wear OS gesture music controller, po
   - **WristRotationDetector**: Universal track-switch detector — automatic dominant-axis selection (Gyro X or Gyro Y), low-pass filtering ($\alpha = 0.75$), trapezoidal angle integration, peak-angular-speed gate, and 3D acceleration-magnitude anti-noise gating. Works across watch wearing orientations, hand sides, and Wear OS device manufacturers (standard Android Sensor API conventions: rad/s, m/s²).
   - **DoublePinchDetector**: Universal, tilt-invariant play/pause detector using 3D acceleration magnitude (+ dedicated Z-axis sensitivity), quiet-gyroscope guard, and a robust two-pinch state machine with rebound and stable re-arm cycles.
   - **FistClenchDetector**: Multi-axis shockwave discriminator distinguishes a deliberate fist clench (activation/arming gesture) from a single directional pinch spike.
-  - **GestureTrainer (DTW)**: 5-repetition Dynamic Time Warping training engine with motion energy analysis and variance thresholds for learning custom gestures.
-  - **GestureArmingManager**: Guard state with a 15-second activity timeout to prevent accidental gestures.
-- **Wear OS User Interface**:
-  - Authentically renders the circular smartwatch AMOLED display (396×396) with curved framing, bezel accents, and smooth scroll behavior.
-  - **Control Screen**: Service toggle, left/right wrist selection, sensitivity sliders (turn angle, pinch threshold, min/max duration, gesture cooldown), and persistence.
-  - **Player Screen**: Media metadata, real-time playback position, transport buttons (Play/Pause, Next, Previous), and MediaSession API synchronization.
+  - **Gesture Training System**: 5-repetition training engine with motion energy analysis and adaptive thresholds for learning custom gestures.
+  - **GestureArmingManager**: Guard state with a 12-second activity timeout to prevent accidental gestures.
+- **Native Wear OS User Interface**:
+  - Authentically designed for circular smartwatch AMOLED displays with curved framing and smooth scroll behavior.
+  - **Control Screen**: Service toggle, left/right wrist selection, sensitivity sliders (turn angle, pinch threshold, clench threshold, gesture cooldown), and persistence.
+  - **Player Screen**: Media metadata, transport buttons (Play/Pause, Next, Previous), volume controls, and MediaSession API synchronization.
   - **Training Screen**: Repetition progress ring, auto-capture of motion samples, and gesture template saving.
-- **Gesture & IMU Sensor Simulator**:
-  - Emulates physical wrist rotations and double pinches directly in the browser with live IMU readings.
-  - Supports the Web DeviceMotion API on supported mobile and smartwatch browsers.
+  - **Sensors Screen**: Live IMU sensor readings and diagnostic information.
+- **Foreground Service**: Gesture detection works in background with proper wake lock and notification handling.
 
 ## Gestures & Controls
 
@@ -26,14 +25,33 @@ Web-based recreation of the Galaxy Watch 4+ Wear OS gesture music controller, po
 | **Turn Wrist Right** | Next Track | `WristRotationDetector` — dominant-axis (X/Y) integration, optional left-hand sign mirroring |
 | **Turn Wrist Left** | Previous Track | `WristRotationDetector` — dominant-axis (X/Y) integration, optional left-hand sign mirroring |
 | **Double Pinch** | Play / Pause | `DoublePinchDetector` (tilt-invariant, 3D magnitude + Z-axis impulse, quiet-gyro guard) |
-| **Fist Clench** | Disarm Guard (15s) | `FistClenchDetector` (multi-axis shockwave) / `GestureTrainer` DTW / `GestureArmingManager` |
+| **Fist Clench** | Disarm Guard (12s) | `FistClenchDetector` (multi-axis shockwave) / `GestureArmingManager` |
 
 ## Development & Build
 
 ```bash
-# Start development server
-npm run dev
+# Build debug APK
+./gradlew assembleDebug
 
-# Production build
-npm run build
+# Build release APK
+./gradlew assembleRelease
+
+# Install on connected device
+./gradlew installDebug
 ```
+
+## Requirements
+
+- Android Studio Hedgehog (2023.1.1) or later
+- Android SDK API 26+ (Android 8.0)
+- Wear OS device or emulator
+- Bluetooth connection to phone with media player
+
+## Permissions
+
+- `WAKE_LOCK` - Keep sensor processing active
+- `VIBRATE` - Haptic feedback for gestures
+- `HIGH_SAMPLING_RATE_SENSORS` - High-frequency sensor data
+- `FOREGROUND_SERVICE` - Background gesture detection
+- `POST_NOTIFICATIONS` - Service notification
+- `BLUETOOTH_CONNECT` - Media session connectivity

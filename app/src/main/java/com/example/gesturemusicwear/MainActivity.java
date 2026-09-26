@@ -55,7 +55,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private boolean mIsLeftHand = true;
     private float mAngleThreshold = 45f;      // degrees
     private float mPinchThreshold = 2.2f;     // g
-    private float mClenchThreshold = 3.0f;    // g
+    private float mClenchThreshold = 2.2f;    // g (reduced from 3.0f for better detection)
     private boolean mHapticsEnabled = true;
 
     // False trigger protection via Fist Activation (Взведение / Активация жестом кулака)
@@ -206,7 +206,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             mIsLeftHand = prefs.getBoolean("left_hand", true);
             mAngleThreshold = prefs.getFloat("angle_thresh", 45f);
             mPinchThreshold = prefs.getFloat("pinch_thresh", 2.2f);
-            mClenchThreshold = prefs.getFloat("clench_thresh", 3.0f);
+            mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
             mHapticsEnabled = prefs.getBoolean("haptics", true);
             mFistGuardEnabled = prefs.getBoolean("fist_guard", true);
         } catch (Throwable ignored) {}
@@ -236,7 +236,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             4.0f, 900, GESTURE_COOLDOWN_MS, 2.5f
         );
         mFistDetector = new FistClenchDetector(
-            mClenchThreshold, 1200, 1.8f
+            mClenchThreshold, 1200, 2.2f // increased maxGyroMagnitude from 1.8f to 2.2f
         );
     }
 
@@ -246,7 +246,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (mPinchDetector != null)
             mPinchDetector.updateSettings(mPinchThreshold, GESTURE_COOLDOWN_MS);
         if (mFistDetector != null)
-            mFistDetector.updateSettings(mClenchThreshold, 1200);
+            mFistDetector.updateSettings(mClenchThreshold, 1200); // Keep improved cooldown
     }
 
     // ==========================================
@@ -748,7 +748,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mClenchThreshold = Math.max(1.8f, mClenchThreshold - 0.3f);
+                    mClenchThreshold = Math.max(1.5f, mClenchThreshold - 0.2f); // reduced min from 1.8f to 1.5f
                     savePreferences();
                     updateDetectors();
                     mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
@@ -758,7 +758,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mClenchThreshold = Math.min(5.0f, mClenchThreshold + 0.3f);
+                    mClenchThreshold = Math.min(4.0f, mClenchThreshold + 0.2f); // reduced max from 5.0f to 4.0f
                     savePreferences();
                     updateDetectors();
                     mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
@@ -1212,16 +1212,20 @@ public class MainActivity extends Activity implements SensorEventListener {
         float avg = mTrainingAccumulatedSum / (float) TRAINING_TARGET_REPS;
         String resultMsg = "";
 
+        // Improved calibration formulas with better sensitivity ranges
         if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
-            mAngleThreshold = Math.max(25f, Math.min(75f, (avg / 4.0f) * 0.85f));
+            // For wrist rotation: use a more adaptive formula based on average gyro speed
+            mAngleThreshold = Math.max(20f, Math.min(70f, (avg / 3.5f) * 0.9f));
             resultMsg = "Порог вращения: " + ((int) mAngleThreshold) + "°";
             if (mSettingsAngleText != null) mSettingsAngleText.setText(((int) mAngleThreshold) + "°");
         } else if (mActiveTrainingGesture == TRAINING_PINCH) {
-            mPinchThreshold = Math.max(1.4f, Math.min(3.5f, avg * 0.85f));
+            // For pinch: more sensitive threshold calculation
+            mPinchThreshold = Math.max(1.2f, Math.min(3.2f, avg * 0.9f));
             resultMsg = String.format(Locale.US, "Порог щипка: %.1f g", mPinchThreshold);
             if (mSettingsPinchText != null) mSettingsPinchText.setText(String.format(Locale.US, "%.1f g", mPinchThreshold));
         } else if (mActiveTrainingGesture == TRAINING_FIST) {
-            mClenchThreshold = Math.max(2.0f, Math.min(4.8f, avg * 0.85f));
+            // For fist: improved threshold with better range
+            mClenchThreshold = Math.max(1.8f, Math.min(4.0f, avg * 0.9f));
             resultMsg = String.format(Locale.US, "Порог активации (кулак): %.1f g", mClenchThreshold);
             if (mSettingsClenchText != null) mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
         }
@@ -1482,7 +1486,9 @@ public class MainActivity extends Activity implements SensorEventListener {
         boolean validDir = true;
 
         if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
-            value = (float) Math.toDegrees(Math.abs(gy));
+            // Improved wrist rotation detection using gyroscope magnitude
+            float gyroMag = (float) Math.sqrt(gx * gx + gy * gy + gz * gz);
+            value = (float) Math.toDegrees(gyroMag);
             boolean isOutward = mIsLeftHand ? (gy < 0) : (gy > 0);
             validDir = (mActiveTrainingGesture == TRAINING_OUTWARD && isOutward)
                     || (mActiveTrainingGesture == TRAINING_INWARD && !isOutward);
@@ -1497,11 +1503,11 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingBufferHead = (mTrainingBufferHead + 1) % TRAINING_BUFFER_SIZE;
         if (mTrainingBufferCount < TRAINING_BUFFER_SIZE) mTrainingBufferCount++;
 
-        // Update live feedback
+        // Improved live feedback with more appropriate thresholds
         final boolean motionDetected = validDir && (
-            (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) && value > 80f
-            || mActiveTrainingGesture == TRAINING_PINCH && value > 1.3f
-            || mActiveTrainingGesture == TRAINING_FIST && value > 1.8f);
+            (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) && value > 60f
+            || mActiveTrainingGesture == TRAINING_PINCH && value > 1.2f
+            || mActiveTrainingGesture == TRAINING_FIST && value > 1.5f);
         mMainHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -1521,30 +1527,30 @@ public class MainActivity extends Activity implements SensorEventListener {
         float bestValue = 0f;
         boolean bestValidDir = true;
 
+        // Improved time window analysis - use data from 50–600ms before the tap
         for (int i = 0; i < mTrainingBufferCount; i++) {
             int idx = (mTrainingBufferHead - 1 - i + TRAINING_BUFFER_SIZE * 2) % TRAINING_BUFFER_SIZE;
             long ts = mTrainingBufferTime[idx];
             long age = now - ts;
-            // Use data from 100–500ms before the tap (avoids tap-induced shake)
-            if (age < 100) continue;
-            if (age > 500) break;
+            if (age < 50) continue; // Skip very recent data (tap-induced shake)
+            if (age > 600) break;   // Skip too old data
             if (mTrainingBufferValue[idx] > bestValue) {
                 bestValue = mTrainingBufferValue[idx];
                 bestValidDir = mTrainingBufferValidDir[idx];
             }
         }
 
-        // Minimum thresholds: reject idle or too-weak input
+        // Improved minimum thresholds with more realistic values
         float minThreshold;
         String errorText;
         if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
-            minThreshold = 80f;
+            minThreshold = 60f; // reduced from 80f
             errorText = bestValidDir ? "Сделайте вращение активнее" : "Неверное направление, повторите";
         } else if (mActiveTrainingGesture == TRAINING_PINCH) {
-            minThreshold = 1.3f;
+            minThreshold = 1.2f; // reduced from 1.3f
             errorText = "Сделайте щипок активнее";
         } else {
-            minThreshold = 1.8f;
+            minThreshold = 1.5f; // reduced from 1.8f
             errorText = "Сожмите кисть сильнее";
         }
 
@@ -1641,23 +1647,53 @@ public class MainActivity extends Activity implements SensorEventListener {
                     if (controller != null) {
                         MediaController.TransportControls tc = controller.getTransportControls();
                         if (tc != null) {
-                            if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
-                                tc.skipToNext();
-                                return;
-                            } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
-                                tc.skipToPrevious();
-                                return;
+                            // Check if the action is supported by the media session
+                            android.media.session.PlaybackState state = controller.getPlaybackState();
+                            if (state != null) {
+                                long actions = state.getActions();
+                                if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
+                                    if ((actions & android.media.session.PlaybackState.ACTION_SKIP_TO_NEXT) != 0) {
+                                        tc.skipToNext();
+                                        Log.i(TAG, "MediaController.skipToNext() called");
+                                        return;
+                                    } else {
+                                        Log.w(TAG, "SKIP_TO_NEXT not supported by media session");
+                                    }
+                                } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
+                                    if ((actions & android.media.session.PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0) {
+                                        tc.skipToPrevious();
+                                        Log.i(TAG, "MediaController.skipToPrevious() called");
+                                        return;
+                                    } else {
+                                        Log.w(TAG, "SKIP_TO_PREVIOUS not supported by media session");
+                                    }
+                                }
+                            } else {
+                                // Fallback if state is null
+                                if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
+                                    tc.skipToNext();
+                                    Log.i(TAG, "MediaController.skipToNext() called (no state check)");
+                                    return;
+                                } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
+                                    tc.skipToPrevious();
+                                    Log.i(TAG, "MediaController.skipToPrevious() called (no state check)");
+                                    return;
+                                }
                             }
                         }
                     }
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                Log.w(TAG, "MediaController error, falling back to AudioManager", t);
+            }
         }
 
+        // Fallback to AudioManager dispatch
         if (mAudioManager != null) {
             try {
                 mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
                 mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keycode));
+                Log.i(TAG, "AudioManager.dispatchMediaKeyEvent() called for keycode: " + keycode);
             } catch (Throwable ignored) {}
         }
     }
