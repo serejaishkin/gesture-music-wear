@@ -16,6 +16,7 @@ import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.VibrationEffect;
@@ -70,6 +71,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     private float mLastGx = 0f, mLastGy = 0f, mLastGz = 0f;
     private float mLastAx = 0f, mLastAy = 0f, mLastAz = 0f;
     private long mLastGestureTimestamp = 0L;
+    private long mSensorEventCount = 0L;
+    private boolean mSensorRegistrationOk = false;
     private static final long GESTURE_COOLDOWN_MS = 650L;
     private static final long CROSS_GESTURE_DEBOUNCE_MS = 300L;
     private long mLastGuardNotifyTime = 0L;
@@ -1180,7 +1183,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void recordTrainingRepetition(float val, final String name) {
-        mLastGestureTimestamp = System.currentTimeMillis();
+        mLastGestureTimestamp = SystemClock.elapsedRealtime();
         mTrainingRepsCompleted++;
         mTrainingAccumulatedSum += val;
         vibrateFeedback(60);
@@ -1376,6 +1379,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (mSensorManager == null) return;
         try {
             if (mGyroscope == null || mAccelerometer == null) {
+                mSensorRegistrationOk = false;
                 writeDiag("Сенсоры недоступны: gyro=" + (mGyroscope != null) + ", accel=" + (mAccelerometer != null));
                 Log.e(TAG, "Required motion sensors are unavailable");
                 return;
@@ -1386,7 +1390,11 @@ public class MainActivity extends Activity implements SensorEventListener {
             if (mAccelerometer != null) {
                 mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
             }
+            mSensorRegistrationOk = true;
+            Log.i(TAG, "Sensors registered: gyro=" + mGyroscope.getName()
+                    + ", accel=" + mAccelerometer.getName());
         } catch (Throwable t) {
+            mSensorRegistrationOk = false;
             Log.w(TAG, "Sensor registration failed: ", t);
         }
     }
@@ -1404,6 +1412,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (!mSensorsActive) return;
+        mSensorEventCount++;
 
         if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
             mLastGx = event.values[0];
@@ -1533,7 +1542,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private void confirmTrainingRepetition() {
         if (mTrainingFinished || mActiveTrainingGesture == TRAINING_NONE) return;
 
-        long now = System.currentTimeMillis();
+        long now = SystemClock.elapsedRealtime();
         float bestValue = 0f;
         boolean bestValidDir = true;
 
@@ -1596,9 +1605,16 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void vibrateDoublePulse() {
-        if (!mHapticsEnabled) return;
+        if (!mHapticsEnabled) {
+            Log.w(TAG, "Haptics disabled in settings");
+            return;
+        }
         try {
             Vibrator v = getVibrator();
+            if (v == null || !v.hasVibrator()) {
+                Log.e(TAG, "Device reports no vibrator");
+                return;
+            }
             if (v != null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     v.vibrate(VibrationEffect.createWaveform(new long[]{0, 50, 60, 80}, -1));
@@ -1709,7 +1725,10 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (mCurrentScreen != 3) return;
 
         if (mSensorsGyroText != null) {
-            String gyroLine = String.format(Locale.US,
+            String sensorState = mSensorRegistrationOk
+                    ? "Сенсоры: OK • событий " + mSensorEventCount
+                    : "Сенсоры: ОШИБКА регистрации";
+            String gyroLine = sensorState + "\n" + String.format(Locale.US,
                 "Гиро: X:%+.1f Y:%+.1f Z:%+.1f rad/s", mLastGx, mLastGy, mLastGz);
             if (mWristDetector != null
                     && (mActiveTrainingGesture == TRAINING_OUTWARD
@@ -1740,7 +1759,9 @@ public class MainActivity extends Activity implements SensorEventListener {
             if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 v.vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            Log.e(TAG, "Vibration failed", t);
+        }
     }
 
     @SuppressWarnings("deprecation")
