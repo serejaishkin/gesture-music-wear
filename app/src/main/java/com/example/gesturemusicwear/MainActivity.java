@@ -230,7 +230,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private void initDetectors() {
         mWristDetector = new WristRotationDetector(
             mAngleThreshold, 0.8f, 100, 1000, GESTURE_COOLDOWN_MS, // Reduced minAngularSpeed from 1.2f to 0.8f, adjusted duration
-            800, 0.25f, 200, 24.0f, mIsLeftHand // Reduced idleThreshold from 0.35f to 0.25f, increased idleTimeout
+            800, 0.25f, 200, 35.0f, mIsLeftHand // Reduced idleThreshold from 0.35f to 0.25f, increased idleTimeout
         );
         mPinchDetector = new DoublePinchDetector(
             mPinchThreshold, -(mPinchThreshold * 0.6f),
