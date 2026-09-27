@@ -168,7 +168,7 @@ public class GestureForegroundService extends Service implements SensorEventList
     private void initDetectors() {
         mWristDetector = new WristRotationDetector(
             mAngleThreshold, 0.8f, 100, 1000, GESTURE_COOLDOWN_MS, // Reduced minAngularSpeed from 1.2f to 0.8f, adjusted duration
-            800, 0.25f, 200, 24.0f, mIsLeftHand // Reduced idleThreshold from 0.35f to 0.25f, increased idleTimeout
+            800, 0.25f, 200, 35.0f, mIsLeftHand // Reduced idleThreshold from 0.35f to 0.25f, increased idleTimeout
         );
         mWristDetector.updateSettings(mAngleThreshold, GESTURE_COOLDOWN_MS, mIsLeftHand, 100, 1000); // Updated duration parameters
         mPinchDetector = new DoublePinchDetector(
