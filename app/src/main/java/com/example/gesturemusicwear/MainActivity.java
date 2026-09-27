@@ -2,6 +2,7 @@ package com.example.gesturemusicwear;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -1791,9 +1792,34 @@ public class MainActivity extends Activity implements SensorEventListener {
         setContentView(errorView);
     }
 
+    private void startGestureForegroundService() {
+        if (!mSensorsActive) return;
+        try {
+            Intent intent = new Intent(this, GestureForegroundService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
+            Log.i(TAG, "GestureForegroundService started");
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to start GestureForegroundService", t);
+            writeDiag("Ошибка запуска FGS: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+    }
+
+    private void stopGestureForegroundService() {
+        try {
+            stopService(new Intent(this, GestureForegroundService.class));
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to stop GestureForegroundService", t);
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        stopGestureForegroundService();
         if (mRootLayout != null) {
             mRootLayout.requestFocus();
         }
@@ -1804,5 +1830,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     protected void onPause() {
         super.onPause();
         unregisterSensors();
+        startGestureForegroundService();
     }
 }
