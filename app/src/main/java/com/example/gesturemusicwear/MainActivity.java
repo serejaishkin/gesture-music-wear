@@ -1375,6 +1375,11 @@ public class MainActivity extends Activity implements SensorEventListener {
     private synchronized void registerSensors() {
         if (mSensorManager == null) return;
         try {
+            if (mGyroscope == null || mAccelerometer == null) {
+                writeDiag("Сенсоры недоступны: gyro=" + (mGyroscope != null) + ", accel=" + (mAccelerometer != null));
+                Log.e(TAG, "Required motion sensors are unavailable");
+                return;
+            }
             if (mGyroscope != null) {
                 mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
             }
@@ -1410,7 +1415,10 @@ public class MainActivity extends Activity implements SensorEventListener {
             mLastAz = event.values[2];
         }
 
-        processSensors(System.currentTimeMillis(), mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz);
+        long eventMs = event.timestamp > 0L
+                ? event.timestamp / 1_000_000L
+                : System.currentTimeMillis();
+        processSensors(eventMs, mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz);
         updateLiveSensorsUI();
     }
 
