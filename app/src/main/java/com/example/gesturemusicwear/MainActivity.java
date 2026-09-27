@@ -1344,6 +1344,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     // Hardware back button navigation
     @Override
+    @SuppressWarnings("deprecation")
     public void onBackPressed() {
         if (mCurrentScreen > 0) {
             switchToScreen(mCurrentScreen - 1);
@@ -1588,13 +1589,10 @@ public class MainActivity extends Activity implements SensorEventListener {
     private void vibrateDoublePulse() {
         if (!mHapticsEnabled) return;
         try {
-            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            Vibrator v = getVibrator();
             if (v != null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     v.vibrate(VibrationEffect.createWaveform(new long[]{0, 50, 60, 80}, -1));
-                    return;
-                } else {
-                    v.vibrate(new long[]{0, 50, 60, 80}, -1);
                     return;
                 }
             }
@@ -1729,22 +1727,22 @@ public class MainActivity extends Activity implements SensorEventListener {
     private void vibrateFeedback(long milliseconds) {
         if (!mHapticsEnabled) return;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                VibratorManager vm = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-                if (vm != null) {
-                    vm.getDefaultVibrator().vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
-                    return;
-                }
-            }
-            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-            if (v != null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    v.vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
-                } else {
-                    v.vibrate(milliseconds);
-                }
+            Vibrator v = getVibrator();
+            if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v.vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
             }
         } catch (Throwable ignored) {}
+    }
+
+    @SuppressWarnings("deprecation")
+    private Vibrator getVibrator() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                VibratorManager vm = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                if (vm != null) return vm.getDefaultVibrator();
+            }
+        } catch (Throwable ignored) {}
+        return (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
     private void startClockUpdater() {

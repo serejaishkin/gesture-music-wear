@@ -22,6 +22,7 @@ import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import androidx.core.app.NotificationCompat;
 import android.util.Log;
 import android.view.KeyEvent;
 
@@ -314,16 +315,13 @@ public class GestureForegroundService extends Service implements SensorEventList
         if (!mHapticsEnabled) return;
         try {
             Vibrator v = getVibrator();
-            if (v != null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    v.vibrate(VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE));
-                } else {
-                    v.vibrate(80L);
-                }
+            if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v.vibrate(VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE));
             }
         } catch (Throwable ignored) {}
     }
 
+    @SuppressWarnings("deprecation")
     private Vibrator getVibrator() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -349,22 +347,30 @@ public class GestureForegroundService extends Service implements SensorEventList
             Intent intent = new Intent(this, MainActivity.class);
             PendingIntent pi = PendingIntent.getActivity(this, 0, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            Notification.Builder nb;
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                nb = new Notification.Builder(this, CHANNEL_ID);
+                return new Notification.Builder(this, CHANNEL_ID)
+                        .setContentTitle("Gesture Wear активен")
+                        .setContentText("Жесты работают в фоне")
+                        .setSmallIcon(android.R.drawable.ic_media_play)
+                        .setContentIntent(pi)
+                        .setOngoing(true)
+                        .build();
             } else {
-                nb = new Notification.Builder(this);
+                // Fallback for older versions - but we minSdk is 26 (Android 8.0) so this shouldn't happen
+                return new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setContentTitle("Gesture Wear активен")
+                        .setContentText("Жесты работают в фоне")
+                        .setSmallIcon(android.R.drawable.ic_media_play)
+                        .setContentIntent(pi)
+                        .setOngoing(true)
+                        .build();
             }
-            return nb
-                    .setContentTitle("Gesture Wear активен")
-                    .setContentText("Жесты работают в фоне")
-                    .setSmallIcon(android.R.drawable.ic_media_play)
-                    .setContentIntent(pi)
-                    .setOngoing(true)
-                    .build();
         } catch (Throwable ignored) {}
-        return new Notification.Builder(this).setContentTitle("Gesture Wear")
-                .setContentText("").build();
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Gesture Wear")
+                .setContentText("")
+                .build();
     }
 
     @Override
