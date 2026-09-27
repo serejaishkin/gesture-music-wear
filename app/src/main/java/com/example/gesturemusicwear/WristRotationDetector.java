@@ -7,10 +7,10 @@ import java.util.Iterator;
  * Universal wrist rotation detector for track switching.
  *
  * Simplified and more sensitive version for better real-world detection.
- * Auto-detects the dominant rotation axis (Gyro X or Gyro Y), applies
+ * Auto-detects the dominant rotation axis (Gyro X, Y, or Z), applies
  * low-pass filtering and trapezoidal angle integration over a sliding window.
  * Requires peak angular velocity AND cumulative angle threshold.
- * 3D acceleration magnitude gate rejects running/flailing.
+ * Acceleration magnitude is used only as an impact/noise gate.
  */
 public class WristRotationDetector {
     public static final int RESULT_NONE = 0;
@@ -47,7 +47,6 @@ public class WristRotationDetector {
     private float lastAngleDegrees = 0;
     private float liveGx = 0;
     private float liveGy = 0;
-    private float liveGz = 0;
     private float liveGz = 0;
 
     public WristRotationDetector(float angleThresholdDegrees, float minAngularSpeed,
