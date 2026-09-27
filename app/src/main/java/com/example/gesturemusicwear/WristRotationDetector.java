@@ -48,6 +48,7 @@ public class WristRotationDetector {
     private float liveGx = 0;
     private float liveGy = 0;
     private float liveGz = 0;
+    private float liveGz = 0;
 
     public WristRotationDetector(float angleThresholdDegrees, float minAngularSpeed,
                                  int minDurationMs, int maxDurationMs, long cooldownMs,
