@@ -6,11 +6,11 @@ import java.util.Iterator;
 /**
  * Universal wrist rotation detector for track switching.
  *
+ * Simplified and more sensitive version for better real-world detection.
  * Auto-detects the dominant rotation axis (Gyro X or Gyro Y), applies
  * low-pass filtering and trapezoidal angle integration over a sliding window.
  * Requires peak angular velocity AND cumulative angle threshold.
  * 3D acceleration magnitude gate rejects running/flailing.
- * Direction consistency check (>=55% samples agree on sign).
  */
 public class WristRotationDetector {
     public static final int RESULT_NONE = 0;
@@ -39,7 +39,7 @@ public class WristRotationDetector {
     private float antiNoiseAccMag;
     private boolean leftHand;
 
-    private static final float ALPHA = 0.75f;
+    private static final float ALPHA = 0.8f; // Increased for smoother filtering
     private final ArrayList<Sample> samples = new ArrayList<>();
     private long lastGestureTime = 0;
     private long idleStartTime = 0;
@@ -106,45 +106,29 @@ public class WristRotationDetector {
 
         if (samples.size() < 2) return RESULT_NONE;
 
-        // Peak angular velocity per axis using RAW values
-        float maxSpeedX = 0;
-        float maxSpeedY = 0;
+        // Simplified axis selection - use the axis with higher total movement
+        float totalSpeedX = 0;
+        float totalSpeedY = 0;
         for (Sample s : samples) {
-            if (Math.abs(s.gx) > maxSpeedX) maxSpeedX = Math.abs(s.gx);
-            if (Math.abs(s.gy) > maxSpeedY) maxSpeedY = Math.abs(s.gy);
+            totalSpeedX += Math.abs(s.gx);
+            totalSpeedY += Math.abs(s.gy);
         }
 
-        boolean useAxisX = maxSpeedX >= maxSpeedY;
-        float peakSpeed = useAxisX ? maxSpeedX : maxSpeedY;
-        if (peakSpeed < minAngularSpeed) return RESULT_NONE;
+        boolean useAxisX = totalSpeedX >= totalSpeedY;
 
-        // Dominant direction consistency (>=55% of samples agree on sign)
-        int positiveCount = 0;
-        int negativeCount = 0;
-        for (Sample s : samples) {
-            float v = useAxisX ? s.gx : s.gy;
-            if (v > idleThreshold) positiveCount++;
-            else if (v < -idleThreshold) negativeCount++;
-        }
-        int dominantCount = Math.max(positiveCount, negativeCount);
-        if (dominantCount < samples.size() * 0.55) return RESULT_NONE;
-        boolean dominantPositive = positiveCount >= negativeCount;
+        // Check minimum speed requirement
+        float maxSpeed = useAxisX ? totalSpeedX : totalSpeedY;
+        if (maxSpeed < minAngularSpeed * samples.size()) return RESULT_NONE;
 
-        // Integrate ONLY segments whose sign matches the dominant direction.
-        // This avoids opposite-direction jitter eating up the captured angle.
+        // Simplified integration - just integrate all samples
         float integratedAngleRad = 0;
         for (int i = 1; i < samples.size(); i++) {
             float vCur = useAxisX ? samples.get(i).gx : samples.get(i).gy;
             float vPrev = useAxisX ? samples.get(i - 1).gx : samples.get(i - 1).gy;
-            if (dominantPositive ? (vCur < 0 && vPrev < 0) : (vCur > 0 && vPrev > 0)) continue;
             float dt = (samples.get(i).timestamp - samples.get(i - 1).timestamp) / 1000f;
             integratedAngleRad += ((vCur + vPrev) / 2f) * dt;
         }
         float angleDegrees = (float) Math.toDegrees(integratedAngleRad);
-        if (dominantPositive != (integratedAngleRad >= 0)) {
-            // Net angle must match dominant direction; otherwise treat as none
-            return RESULT_NONE;
-        }
 
         long duration = samples.get(samples.size() - 1).timestamp - samples.get(0).timestamp;
         if (duration < minDurationMs) return RESULT_NONE;
@@ -175,34 +159,30 @@ public class WristRotationDetector {
     public float getLastAngleDegrees() { return lastAngleDegrees; }
 
     public float getEffectiveThreshold() {
-        // Improved effective threshold calculation for better sensitivity
-        float t = Math.min(angleThresholdDegrees * 0.7f, 35f); // increased from 0.6f to 0.7f, reduced max from 40f to 35f
-        if (t < 12f) t = 12f; // reduced minimum from 15f to 12f
+        // Much more sensitive threshold for better real-world detection
+        float t = Math.min(angleThresholdDegrees * 0.5f, 25f); // reduced from 0.7f to 0.5f, max 25f
+        if (t < 8f) t = 8f; // reduced minimum from 12f to 8f
         return t;
     }
 
     /** Current accumulated angle of the live window (for on-device diagnostics). */
     public float getLiveAngleDegrees() {
         if (samples.size() < 2) return 0;
-        float maxSpeedX = 0;
-        float maxSpeedY = 0;
+
+        // Simplified live angle calculation matching the main process logic
+        float totalSpeedX = 0;
+        float totalSpeedY = 0;
         for (Sample s : samples) {
-            if (Math.abs(s.gx) > maxSpeedX) maxSpeedX = Math.abs(s.gx);
-            if (Math.abs(s.gy) > maxSpeedY) maxSpeedY = Math.abs(s.gy);
+            totalSpeedX += Math.abs(s.gx);
+            totalSpeedY += Math.abs(s.gy);
         }
-        boolean useAxisX = maxSpeedX >= maxSpeedY;
-        int pos = 0, neg = 0;
-        for (Sample s : samples) {
-            float v = useAxisX ? s.gx : s.gy;
-            if (v > idleThreshold) pos++;
-            else if (v < -idleThreshold) neg++;
-        }
-        boolean domPos = pos >= neg;
+
+        boolean useAxisX = totalSpeedX >= totalSpeedY;
+
         float integ = 0;
         for (int i = 1; i < samples.size(); i++) {
             float vCur = useAxisX ? samples.get(i).gx : samples.get(i).gy;
             float vPrev = useAxisX ? samples.get(i - 1).gx : samples.get(i - 1).gy;
-            if (domPos ? (vCur < 0 && vPrev < 0) : (vCur > 0 && vPrev > 0)) continue;
             float dt = (samples.get(i).timestamp - samples.get(i - 1).timestamp) / 1000f;
             integ += ((vCur + vPrev) / 2f) * dt;
         }

@@ -58,7 +58,7 @@ public class GestureForegroundService extends Service implements SensorEventList
     private boolean mSensorsActive = true;
     private boolean mHapticsEnabled = true;
     private boolean mIsLeftHand = true;
-    private float mAngleThreshold = 45f;
+    private float mAngleThreshold = 35f; // reduced from 45f for better sensitivity
     private float mPinchThreshold = 2.2f;
     private float mClenchThreshold = 2.2f; // reduced from 3.0f for better detection
 
@@ -143,7 +143,7 @@ public class GestureForegroundService extends Service implements SensorEventList
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             mSensorsActive = prefs.getBoolean("active", true);
             mIsLeftHand = prefs.getBoolean("left_hand", true);
-            mAngleThreshold = prefs.getFloat("angle_thresh", 45f);
+            mAngleThreshold = prefs.getFloat("angle_thresh", 35f); // Reduced default from 45f to 35f for better sensitivity
             mPinchThreshold = prefs.getFloat("pinch_thresh", 2.2f);
             mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
             mHapticsEnabled = prefs.getBoolean("haptics", true);
@@ -153,10 +153,10 @@ public class GestureForegroundService extends Service implements SensorEventList
 
     private void initDetectors() {
         mWristDetector = new WristRotationDetector(
-            mAngleThreshold, 1.2f, 120, 900, GESTURE_COOLDOWN_MS,
-            700, 0.35f, 180, 24.0f, mIsLeftHand
+            mAngleThreshold, 0.8f, 100, 1000, GESTURE_COOLDOWN_MS, // Reduced minAngularSpeed from 1.2f to 0.8f, adjusted duration
+            800, 0.25f, 200, 24.0f, mIsLeftHand // Reduced idleThreshold from 0.35f to 0.25f, increased idleTimeout
         );
-        mWristDetector.updateSettings(mAngleThreshold, GESTURE_COOLDOWN_MS, mIsLeftHand, 120, 900);
+        mWristDetector.updateSettings(mAngleThreshold, GESTURE_COOLDOWN_MS, mIsLeftHand, 100, 1000); // Updated duration parameters
         mPinchDetector = new DoublePinchDetector(
             mPinchThreshold, -(mPinchThreshold * 0.6f), 4.0f, 900, GESTURE_COOLDOWN_MS, 2.5f
         );
