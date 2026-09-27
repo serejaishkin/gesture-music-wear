@@ -17,12 +17,13 @@ import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.ServiceCompat;
+import android.content.pm.ServiceInfo;
 import android.util.Log;
 import android.view.KeyEvent;
 
@@ -41,7 +42,6 @@ public class GestureForegroundService extends Service implements SensorEventList
     private SensorManager mSensorManager;
     private Sensor mGyroscope;
     private Sensor mAccelerometer;
-    private PowerManager.WakeLock mWakeLock;
 
     private WristRotationDetector mWristDetector;
     private DoublePinchDetector mPinchDetector;
@@ -79,19 +79,24 @@ public class GestureForegroundService extends Service implements SensorEventList
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mMediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
 
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        if (pm != null) {
-            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GestureWear:Foreground");
-            mWakeLock.setReferenceCounted(false);
-            mWakeLock.acquire(10L * 60L * 1000L);
-        }
         createNotificationChannel();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Notification n = buildNotification();
-        startForeground(1, n);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(this, 1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH);
+            } else {
+                startForeground(1, n);
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Unable to promote sensor service to foreground", t);
+            writeDiag("Ошибка FGS: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         if (mSensorsActive) registerSensors();
         return START_STICKY;
     }
@@ -99,6 +104,11 @@ public class GestureForegroundService extends Service implements SensorEventList
     private synchronized void registerSensors() {
         if (mSensorManager == null) return;
         try {
+            if (mGyroscope == null || mAccelerometer == null) {
+                writeDiag("Сенсоры недоступны: gyro=" + (mGyroscope != null) + ", accel=" + (mAccelerometer != null));
+                Log.e(TAG, "Required motion sensors are unavailable");
+                return;
+            }
             if (mGyroscope != null) {
                 mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
             }
@@ -132,7 +142,10 @@ public class GestureForegroundService extends Service implements SensorEventList
             mLastAy = event.values[1];
             mLastAz = event.values[2];
         }
-        processSensors(System.currentTimeMillis(), mLastGx, mLastGy, mLastGz,
+        long eventMs = event.timestamp > 0L
+                ? event.timestamp / 1_000_000L
+                : System.currentTimeMillis();
+        processSensors(eventMs, mLastGx, mLastGy, mLastGz,
                 mLastAx, mLastAy, mLastAz);
     }
 
@@ -224,7 +237,7 @@ public class GestureForegroundService extends Service implements SensorEventList
 
     /** Mirror MainActivity.sendMediaKey: prefer MediaController, fallback AudioManager dispatch. */
     private void sendMediaKey(int keycode, int kind) {
-        boolean isToggle = kind == 1; // RESULT_PLAY_PAUSE is toggle
+        boolean isToggle = kind == 3; // RESULT_PLAY_PAUSE is toggle
         StringBuilder diag = new StringBuilder();
         diag.append("Жест -> key=").append(keycode).append(" toggle=").append(isToggle);
         if (!isToggle && mMediaSessionManager != null) {
@@ -381,7 +394,13 @@ public class GestureForegroundService extends Service implements SensorEventList
     @Override
     public void onDestroy() {
         unregisterSensors();
-        if (mWakeLock != null && mWakeLock.isHeld()) mWakeLock.release();
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+        } catch (Throwable ignored) {}
         super.onDestroy();
     }
 }
