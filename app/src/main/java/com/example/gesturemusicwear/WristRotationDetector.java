@@ -19,11 +19,12 @@ public class WristRotationDetector {
 
     private static class Sample {
         long timestamp;
-        float gx, gy, accMag;
-        Sample(long ts, float gx, float gy, float am) {
+        float gx, gy, gz, accMag;
+        Sample(long ts, float gx, float gy, float gz, float am) {
             this.timestamp = ts;
             this.gx = gx;
             this.gy = gy;
+            this.gz = gz;
             this.accMag = am;
         }
     }
@@ -46,6 +47,7 @@ public class WristRotationDetector {
     private float lastAngleDegrees = 0;
     private float liveGx = 0;
     private float liveGy = 0;
+    private float liveGz = 0;
 
     public WristRotationDetector(float angleThresholdDegrees, float minAngularSpeed,
                                  int minDurationMs, int maxDurationMs, long cooldownMs,
@@ -84,8 +86,10 @@ public class WristRotationDetector {
 
         liveGx = ALPHA * liveGx + (1 - ALPHA) * gx;
         liveGy = ALPHA * liveGy + (1 - ALPHA) * gy;
+        liveGz = ALPHA * liveGz + (1 - ALPHA) * gz;
 
-        float maxAbsLive = Math.max(Math.abs(liveGx), Math.abs(liveGy));
+        float maxAbsLive = Math.max(Math.abs(liveGx),
+                Math.max(Math.abs(liveGy), Math.abs(liveGz)));
 
         if (maxAbsLive < idleThreshold) {
             if (!samples.isEmpty()) {
@@ -102,29 +106,41 @@ public class WristRotationDetector {
         while (it.hasNext()) {
             if (timestamp - it.next().timestamp > windowMs) it.remove();
         }
-        samples.add(new Sample(timestamp, gx, gy, accMag));
+        samples.add(new Sample(timestamp, gx, gy, gz, accMag));
 
         if (samples.size() < 2) return RESULT_NONE;
 
         // Simplified axis selection - use the axis with higher total movement
         float totalSpeedX = 0;
         float totalSpeedY = 0;
+        float totalSpeedZ = 0;
         for (Sample s : samples) {
             totalSpeedX += Math.abs(s.gx);
             totalSpeedY += Math.abs(s.gy);
+            totalSpeedZ += Math.abs(s.gz);
         }
 
-        boolean useAxisX = totalSpeedX >= totalSpeedY;
+        int dominantAxis = 0;
+        float maxSpeed = totalSpeedX;
+        if (totalSpeedY > maxSpeed) {
+            dominantAxis = 1;
+            maxSpeed = totalSpeedY;
+        }
+        if (totalSpeedZ > maxSpeed) {
+            dominantAxis = 2;
+            maxSpeed = totalSpeedZ;
+        }
 
         // Check minimum speed requirement
-        float maxSpeed = useAxisX ? totalSpeedX : totalSpeedY;
         if (maxSpeed < minAngularSpeed * samples.size()) return RESULT_NONE;
 
         // Simplified integration - just integrate all samples
         float integratedAngleRad = 0;
         for (int i = 1; i < samples.size(); i++) {
-            float vCur = useAxisX ? samples.get(i).gx : samples.get(i).gy;
-            float vPrev = useAxisX ? samples.get(i - 1).gx : samples.get(i - 1).gy;
+            float vCur = dominantAxis == 0 ? samples.get(i).gx
+                    : (dominantAxis == 1 ? samples.get(i).gy : samples.get(i).gz);
+            float vPrev = dominantAxis == 0 ? samples.get(i - 1).gx
+                    : (dominantAxis == 1 ? samples.get(i - 1).gy : samples.get(i - 1).gz);
             float dt = (samples.get(i).timestamp - samples.get(i - 1).timestamp) / 1000f;
             integratedAngleRad += ((vCur + vPrev) / 2f) * dt;
         }
@@ -172,17 +188,29 @@ public class WristRotationDetector {
         // Simplified live angle calculation matching the main process logic
         float totalSpeedX = 0;
         float totalSpeedY = 0;
+        float totalSpeedZ = 0;
         for (Sample s : samples) {
             totalSpeedX += Math.abs(s.gx);
             totalSpeedY += Math.abs(s.gy);
+            totalSpeedZ += Math.abs(s.gz);
         }
 
-        boolean useAxisX = totalSpeedX >= totalSpeedY;
+        int dominantAxis = 0;
+        float maxSpeed = totalSpeedX;
+        if (totalSpeedY > maxSpeed) {
+            dominantAxis = 1;
+            maxSpeed = totalSpeedY;
+        }
+        if (totalSpeedZ > maxSpeed) {
+            dominantAxis = 2;
+        }
 
         float integ = 0;
         for (int i = 1; i < samples.size(); i++) {
-            float vCur = useAxisX ? samples.get(i).gx : samples.get(i).gy;
-            float vPrev = useAxisX ? samples.get(i - 1).gx : samples.get(i - 1).gy;
+            float vCur = dominantAxis == 0 ? samples.get(i).gx
+                    : (dominantAxis == 1 ? samples.get(i).gy : samples.get(i).gz);
+            float vPrev = dominantAxis == 0 ? samples.get(i - 1).gx
+                    : (dominantAxis == 1 ? samples.get(i - 1).gy : samples.get(i - 1).gz);
             float dt = (samples.get(i).timestamp - samples.get(i - 1).timestamp) / 1000f;
             integ += ((vCur + vPrev) / 2f) * dt;
         }
@@ -195,6 +223,7 @@ public class WristRotationDetector {
         resetWindow();
         liveGx = 0;
         liveGy = 0;
+        liveGz = 0;
         lastGestureTime = 0;
         lastAngleDegrees = 0;
     }
