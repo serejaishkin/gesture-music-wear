@@ -1384,13 +1384,12 @@ public class MainActivity extends Activity implements SensorEventListener {
                 Log.e(TAG, "Required motion sensors are unavailable");
                 return;
             }
-            if (mGyroscope != null) {
-                mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
-            }
-            if (mAccelerometer != null) {
-                mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
-            }
-            mSensorRegistrationOk = true;
+            boolean gyroOk = mSensorManager.registerListener(
+                    this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
+            boolean accelOk = mSensorManager.registerListener(
+                    this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+            mSensorRegistrationOk = gyroOk && accelOk;
+            Log.i(TAG, "Sensor registration result: gyro=" + gyroOk + ", accel=" + accelOk);
             Log.i(TAG, "Sensors registered: gyro=" + mGyroscope.getName()
                     + ", accel=" + mAccelerometer.getName());
         } catch (Throwable t) {
@@ -1602,6 +1601,15 @@ public class MainActivity extends Activity implements SensorEventListener {
                 }
             }
         });
+    }
+
+    private void writeDiag(String diag) {
+        try {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit().putString("diag", diag).apply();
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to write diagnostic state", t);
+        }
     }
 
     private void vibrateDoublePulse() {
