@@ -1753,11 +1753,21 @@ public class MainActivity extends Activity implements SensorEventListener {
     // HAPTIC FEEDBACK & CLOCK
     // ==========================================
     private void vibrateFeedback(long milliseconds) {
-        if (!mHapticsEnabled) return;
+        if (!mHapticsEnabled) {
+            Log.w(TAG, "Haptics disabled in settings");
+            return;
+        }
         try {
             Vibrator v = getVibrator();
-            if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v.vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
+            if (v == null || !v.hasVibrator()) {
+                Log.e(TAG, "No vibrator reported by device");
+                return;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v.vibrate(VibrationEffect.createOneShot(
+                        milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
+            } else {
+                v.vibrate(milliseconds);
             }
         } catch (Throwable t) {
             Log.e(TAG, "Vibration failed", t);
