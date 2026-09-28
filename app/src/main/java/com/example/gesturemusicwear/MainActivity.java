@@ -134,6 +134,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     private static final int TRAINING_TARGET_REPS = 5;
     private float mTrainingAccumulatedSum = 0f;
     private boolean mTrainingFinished = false;
+    private long mLastAutoConfirmTime = 0;
+    private static final long AUTO_CONFIRM_COOLDOWN_MS = 800; // Time between auto-confirmations
 
     // Training confirm buffer (manual confirmation, avoids noise)
     private static final int TRAINING_BUFFER_SIZE = 24;
@@ -1129,16 +1131,17 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingLiveFeedbackText.setTextColor(0xFF94A3B8);
         mTrainingLiveFeedbackText.setTextSize(10);
         mTrainingLiveFeedbackText.setGravity(Gravity.CENTER);
-        mTrainingLiveFeedbackText.setText("Ожидание движения...");
+        mTrainingLiveFeedbackText.setText("Делайте жест - авто-подтверждение");
         mTrainingActiveLayout.addView(mTrainingLiveFeedbackText);
 
+        // Manual confirm button is no longer needed with auto-confirm, keeping for future use
         mTrainingConfirmBtn = new Button(this);
         mTrainingConfirmBtn.setText("✓ Подтвердить");
         mTrainingConfirmBtn.setTextSize(12);
         mTrainingConfirmBtn.setTypeface(Typeface.DEFAULT_BOLD);
         mTrainingConfirmBtn.setTextColor(0xFF000000);
         mTrainingConfirmBtn.setBackground(createPillDrawable(0xFF22C55E, 0xFF16A34A, dp(16)));
-        mTrainingConfirmBtn.setVisibility(View.GONE);
+        mTrainingConfirmBtn.setVisibility(View.GONE); // Hidden by default with auto-confirm
         mTrainingConfirmBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) { confirmTrainingRepetition(); }
@@ -1429,32 +1432,33 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingActiveLayout.setVisibility(View.VISIBLE);
         mTrainingSuccessBanner.setVisibility(View.GONE);
         mTrainingRestartBtn.setVisibility(View.GONE);
-        mTrainingConfirmBtn.setVisibility(View.VISIBLE);
+        mTrainingConfirmBtn.setVisibility(View.GONE); // Hide manual confirm button
 
         mTrainingProgressBar.setProgress(0);
         mTrainingRepsCounter.setText("0 / " + TRAINING_TARGET_REPS);
-        mTrainingLiveFeedbackText.setText("Сделайте движение и нажмите Подтвердить");
+        mTrainingLiveFeedbackText.setText("Делайте жест - авто-подтверждение");
+        mLastAutoConfirmTime = 0;
 
         switch (gesture) {
             case TRAINING_OUTWARD:
                 mTrainingGestureTitle.setText("🔄 Вращение наружу");
                 mTrainingInstructionText.setText(mIsLeftHand
-                    ? "Поверните кисть влево от себя, затем Подтвердить"
-                    : "Поверните кисть вправо от себя, затем Подтвердить");
+                    ? "Поверните кисть влево от себя (авто-подтверждение)"
+                    : "Поверните кисть вправо от себя (авто-подтверждение)");
                 break;
             case TRAINING_INWARD:
                 mTrainingGestureTitle.setText("🔄 Вращение внутрь");
                 mTrainingInstructionText.setText(mIsLeftHand
-                    ? "Поверните кисть вправо к телу"
-                    : "Поверните кисть влево к телу");
+                    ? "Поверните кисть вправо к телу (авто-подтверждение)"
+                    : "Поверните кисть влево к телу (авто-подтверждение)");
                 break;
             case TRAINING_PINCH:
                 mTrainingGestureTitle.setText("✌️ Щипок пальцами");
-                mTrainingInstructionText.setText("Сделайте четкий щипок пальцами, затем нажмите Подтвердить");
+                mTrainingInstructionText.setText("Сделайте четкий щипок пальцами (авто-подтверждение)");
                 break;
             case TRAINING_FIST:
                 mTrainingGestureTitle.setText("✊ Активация (Кулак)");
-                mTrainingInstructionText.setText("Энергично сожмите кисть в кулак, затем нажмите Подтвердить");
+                mTrainingInstructionText.setText("Энергично сожмите кисть в кулак (авто-подтверждение)");
                 break;
         }
         vibrateFeedback(40);
@@ -1816,18 +1820,55 @@ public class MainActivity extends Activity implements SensorEventListener {
             (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) && value > 60f
             || mActiveTrainingGesture == TRAINING_PINCH && value > 1.2f
             || mActiveTrainingGesture == TRAINING_FIST && value > 1.5f);
+
+        // Auto-confirm logic when motion is detected and cooldown has passed
+        if (motionDetected && now - mLastAutoConfirmTime > AUTO_CONFIRM_COOLDOWN_MS) {
+            // Find best value in recent buffer
+            float bestValue = 0f;
+            boolean bestValidDir = true;
+            for (int i = 0; i < mTrainingBufferCount; i++) {
+                int idx = (mTrainingBufferHead - 1 - i + TRAINING_BUFFER_SIZE * 2) % TRAINING_BUFFER_SIZE;
+                long age = now - mTrainingBufferTime[idx];
+                if (age < 50) continue; // Skip very recent data
+                if (age > 600) break;   // Skip too old data
+                if (mTrainingBufferValue[idx] > bestValue) {
+                    bestValue = mTrainingBufferValue[idx];
+                    bestValidDir = mTrainingBufferValidDir[idx];
+                }
+            }
+
+            // Check if gesture meets minimum threshold
+            float minThreshold;
+            if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
+                minThreshold = 60f;
+            } else if (mActiveTrainingGesture == TRAINING_PINCH) {
+                minThreshold = 1.2f;
+            } else {
+                minThreshold = 1.5f;
+            }
+
+            if (bestValue >= minThreshold && (bestValidDir || !(mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD))) {
+                // Auto-confirm the gesture
+                mLastAutoConfirmTime = now;
+                recordTrainingRepetition(bestValue, "Авто-подтверждение");
+                return;
+            }
+        }
+
         mMainHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (mTrainingLiveFeedbackText != null) {
                     mTrainingLiveFeedbackText.setText(motionDetected
-                        ? "✔ Движение зафиксировано — нажмите Подтвердить"
+                        ? "✔ Жест зафиксирован..."
                         : "Делайте жест...");
                 }
             }
         });
     }
 
+    // Manual confirmation method is no longer needed with auto-confirm
+    // Kept for potential future use or manual override
     private void confirmTrainingRepetition() {
         if (mTrainingFinished || mActiveTrainingGesture == TRAINING_NONE) return;
 
