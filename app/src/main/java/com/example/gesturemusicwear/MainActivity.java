@@ -59,6 +59,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     private float mPinchThreshold = 2.2f;     // g
     private float mClenchThreshold = 2.2f;    // g (reduced from 3.0f for better detection)
     private boolean mHapticsEnabled = true;
+    private boolean mAdvancedMode = false;    // Advanced mode with more sensitive detection
+    private boolean mDebugMode = false;       // Debug mode for detailed logging
 
     // False trigger protection via Fist Activation (Взведение / Активация жестом кулака)
     private boolean mIsArmed = false;
@@ -87,10 +89,10 @@ public class MainActivity extends Activity implements SensorEventListener {
     private MediaSessionManager mMediaSessionManager;
     private boolean mIsPlaying = false;
 
-    // UI state: 4 screens
-    // 0: Tile, 1: Player, 2: Settings, 3: Sensors
+    // UI state: 5 screens
+    // 0: Tile, 1: Player, 2: Settings, 3: Training, 4: Diagnostics
     private int mCurrentScreen = 0;
-    private static final int NUM_SCREENS = 4;
+    private static final int NUM_SCREENS = 5;
 
     // Root views
     private FrameLayout mRootLayout;
@@ -159,6 +161,20 @@ public class MainActivity extends Activity implements SensorEventListener {
     private ProgressBar mSensorsIntensityBar;
     private TextView mSensorsTriggerAlert;
 
+    // Screen 4: Diagnostics & Logging views
+    private ScrollView mDiagnosticsScrollView;
+    private TextView mDiagnosticsLogText;
+    private Button mDiagnosticsClearBtn;
+    private Button mDiagnosticsExportBtn;
+    private TextView mDiagnosticsStatsText;
+    private TextView mDiagnosticsLiveSensorsText;
+    private StringBuilder mDiagnosticsLog = new StringBuilder();
+    private int mGestureStatsNext = 0;
+    private int mGestureStatsPrevious = 0;
+    private int mGestureStatsPlayPause = 0;
+    private int mGestureStatsFist = 0;
+    private int mGestureStatsFailed = 0;
+
     // Rotary Bezel accumulation
     private float mRotaryAccumulator = 0f;
 
@@ -213,6 +229,21 @@ public class MainActivity extends Activity implements SensorEventListener {
             mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
             mHapticsEnabled = prefs.getBoolean("haptics", true);
             mFistGuardEnabled = prefs.getBoolean("fist_guard", true);
+            mAdvancedMode = prefs.getBoolean("advanced_mode", false);
+            mDebugMode = prefs.getBoolean("debug_mode", false);
+
+            // Load diagnostics log
+            String savedLog = prefs.getString("diagnostics_log", "");
+            if (!savedLog.isEmpty()) {
+                mDiagnosticsLog = new StringBuilder(savedLog);
+            }
+
+            // Load statistics
+            mGestureStatsNext = prefs.getInt("stats_next", 0);
+            mGestureStatsPrevious = prefs.getInt("stats_previous", 0);
+            mGestureStatsPlayPause = prefs.getInt("stats_playpause", 0);
+            mGestureStatsFist = prefs.getInt("stats_fist", 0);
+            mGestureStatsFailed = prefs.getInt("stats_failed", 0);
         } catch (Throwable ignored) {}
     }
 
@@ -226,6 +257,16 @@ public class MainActivity extends Activity implements SensorEventListener {
             editor.putFloat("clench_thresh", mClenchThreshold);
             editor.putBoolean("haptics", mHapticsEnabled);
             editor.putBoolean("fist_guard", mFistGuardEnabled);
+            editor.putBoolean("advanced_mode", mAdvancedMode);
+            editor.putBoolean("debug_mode", mDebugMode);
+
+            // Save statistics
+            editor.putInt("stats_next", mGestureStatsNext);
+            editor.putInt("stats_previous", mGestureStatsPrevious);
+            editor.putInt("stats_playpause", mGestureStatsPlayPause);
+            editor.putInt("stats_fist", mGestureStatsFist);
+            editor.putInt("stats_failed", mGestureStatsFailed);
+
             editor.apply();
         } catch (Throwable ignored) {}
     }
@@ -267,11 +308,12 @@ public class MainActivity extends Activity implements SensorEventListener {
         mRootLayout.addView(mScreenContainer, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Create 4 distinct native screens
+        // Create 5 distinct native screens
         mScreens[0] = createTileScreen();
         mScreens[1] = createPlayerScreen();
         mScreens[2] = createSettingsScreen();
         mScreens[3] = createTrainingScreen();
+        mScreens[4] = createDiagnosticsScreen();
 
         for (int i = 0; i < NUM_SCREENS; i++) {
             mScreenContainer.addView(mScreens[i], new FrameLayout.LayoutParams(
@@ -437,7 +479,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         });
         layout.addView(tileTrainingBtn, trainParams);
 
-        // Bottom quick navigation bar: 3 compact circular icon buttons (32dp x 32dp)
+        // Bottom quick navigation bar: 4 compact circular icon buttons (32dp x 32dp)
         // Perfectly fits within the 180dp bottom width arc of circular screen!
         LinearLayout navBar = new LinearLayout(this);
         navBar.setOrientation(LinearLayout.HORIZONTAL);
@@ -456,10 +498,15 @@ public class MainActivity extends Activity implements SensorEventListener {
             @Override
             public void onClick(View v) { switchToScreen(2); }
         });
+        Button toDiagnosticsBtn = createCircleNavButton("📊", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { switchToScreen(4); }
+        });
 
         navBar.addView(toPlayerBtn);
         navBar.addView(toTrainingBtn);
         navBar.addView(toSettingsBtn);
+        navBar.addView(toDiagnosticsBtn);
         layout.addView(navBar);
 
         mTileScrollView.addView(layout);
@@ -854,8 +901,78 @@ public class MainActivity extends Activity implements SensorEventListener {
         });
         layout.addView(testVibBtn, new LinearLayout.LayoutParams(dp(140), dp(30)));
 
+        // Advanced Mode Toggle
+        Button advancedModeBtn = new Button(this);
+        advancedModeBtn.setText(mAdvancedMode ? "🚀 Продвинутый: ВКЛ" : "🚀 Продвинутый: ВЫКЛ");
+        advancedModeBtn.setTextSize(10);
+        advancedModeBtn.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, dp(15)));
+        advancedModeBtn.setTextColor(0xFFE2E8F0);
+        advancedModeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mAdvancedMode = !mAdvancedMode;
+                savePreferences();
+                advancedModeBtn.setText(mAdvancedMode ? "🚀 Продвинутый: ВКЛ" : "🚀 Продвинутый: ВЫКЛ");
+                updateDetectorsForAdvancedMode();
+                vibrateFeedback(40);
+            }
+        });
+        LinearLayout.LayoutParams advancedP = new LinearLayout.LayoutParams(dp(140), dp(32));
+        advancedP.setMargins(0, dp(4), 0, dp(2));
+        layout.addView(advancedModeBtn, advancedP);
+
+        TextView advancedHint = new TextView(this);
+        advancedHint.setTextColor(0xFF64748B);
+        advancedHint.setTextSize(9);
+        advancedHint.setGravity(Gravity.CENTER);
+        advancedHint.setText("Продвинутый режим — повышенная чувствительность");
+        advancedHint.setPadding(0, 0, 0, dp(6));
+        layout.addView(advancedHint);
+
+        // Debug Mode Toggle
+        Button debugModeBtn = new Button(this);
+        debugModeBtn.setText(mDebugMode ? "🔧 Отладка: ВКЛ" : "🔧 Отладка: ВЫКЛ");
+        debugModeBtn.setTextSize(10);
+        debugModeBtn.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, dp(15)));
+        debugModeBtn.setTextColor(0xFFE2E8F0);
+        debugModeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mDebugMode = !mDebugMode;
+                savePreferences();
+                debugModeBtn.setText(mDebugMode ? "🔧 Отладка: ВКЛ" : "🔧 Отладка: ВЫКЛ");
+                if (mDebugMode) {
+                    addDiagnosticLog("🔧 Режим отладки включён");
+                } else {
+                    addDiagnosticLog("🔧 Режим отладки выключен");
+                }
+                vibrateFeedback(40);
+            }
+        });
+        LinearLayout.LayoutParams debugP = new LinearLayout.LayoutParams(dp(140), dp(32));
+        debugP.setMargins(0, dp(4), 0, dp(6));
+        layout.addView(debugModeBtn, debugP);
+
         mSettingsScrollView.addView(layout);
         return mSettingsScrollView;
+    }
+
+    private void updateDetectorsForAdvancedMode() {
+        if (mAdvancedMode) {
+            // More sensitive settings for advanced mode
+            if (mWristDetector != null) {
+                mWristDetector.updateSettings(mAngleThreshold * 0.7f, (long)(GESTURE_COOLDOWN_MS * 0.8f), mIsLeftHand, 80, 1200);
+            }
+            if (mPinchDetector != null) {
+                mPinchDetector.updateSettings(mPinchThreshold * 0.8f, (long)(GESTURE_COOLDOWN_MS * 0.8f));
+            }
+            if (mFistDetector != null) {
+                mFistDetector.updateSettings(mClenchThreshold * 0.8f, 900);
+            }
+        } else {
+            // Normal settings
+            updateDetectors();
+        }
     }
 
     private interface TextViewBinder {
@@ -1109,6 +1226,176 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         mTrainingScrollView.addView(layout);
         return mTrainingScrollView;
+    }
+
+    // --------------------------------------------------
+    // SCREEN 4: DIAGNOSTICS & LOGGING (Диагностика)
+    // --------------------------------------------------
+    private View createDiagnosticsScreen() {
+        mDiagnosticsScrollView = new ScrollView(this);
+        mDiagnosticsScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        mDiagnosticsScrollView.setVerticalScrollBarEnabled(false);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER_HORIZONTAL);
+        layout.setPadding(dp(20), dp(44), dp(20), dp(36));
+
+        TextView title = new TextView(this);
+        title.setText("📊 Диагностика");
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(13);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, dp(8));
+        layout.addView(title);
+
+        // Statistics section
+        TextView statsTitle = new TextView(this);
+        statsTitle.setText("📈 Статистика жестов");
+        statsTitle.setTextColor(0xFF22D3EE);
+        statsTitle.setTextSize(11);
+        statsTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        statsTitle.setGravity(Gravity.CENTER);
+        statsTitle.setPadding(0, dp(4), 0, dp(4));
+        layout.addView(statsTitle);
+
+        mDiagnosticsStatsText = new TextView(this);
+        mDiagnosticsStatsText.setTextColor(0xFF94A3B8);
+        mDiagnosticsStatsText.setTextSize(9);
+        mDiagnosticsStatsText.setGravity(Gravity.CENTER);
+        mDiagnosticsStatsText.setText("Следующий: 0\nПредыдущий: 0\nPlay/Pause: 0\nКулак: 0\nОшибки: 0");
+        layout.addView(mDiagnosticsStatsText);
+
+        // Live sensors section
+        TextView sensorsTitle = new TextView(this);
+        sensorsTitle.setText("📡 Датчики в реальном времени");
+        sensorsTitle.setTextColor(0xFF22D3EE);
+        sensorsTitle.setTextSize(11);
+        sensorsTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        sensorsTitle.setGravity(Gravity.CENTER);
+        sensorsTitle.setPadding(0, dp(8), 0, dp(4));
+        layout.addView(sensorsTitle);
+
+        mDiagnosticsLiveSensorsText = new TextView(this);
+        mDiagnosticsLiveSensorsText.setTextColor(0xFF94A3B8);
+        mDiagnosticsLiveSensorsText.setTextSize(8);
+        mDiagnosticsLiveSensorsText.setGravity(Gravity.CENTER);
+        mDiagnosticsLiveSensorsText.setText("Гиро: X:0.00 Y:0.00 Z:0.00\nАксель: X:0.00 Y:0.00 Z:0.00");
+        layout.addView(mDiagnosticsLiveSensorsText);
+
+        // Log section
+        TextView logTitle = new TextView(this);
+        logTitle.setText("📝 Лог событий");
+        logTitle.setTextColor(0xFF22D3EE);
+        logTitle.setTextSize(11);
+        logTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        logTitle.setGravity(Gravity.CENTER);
+        logTitle.setPadding(0, dp(8), 0, dp(4));
+        layout.addView(logTitle);
+
+        mDiagnosticsLogText = new TextView(this);
+        mDiagnosticsLogText.setTextColor(0xFF64748B);
+        mDiagnosticsLogText.setTextSize(8);
+        mDiagnosticsLogText.setGravity(Gravity.LEFT);
+        mDiagnosticsLogText.setPadding(dp(4), dp(2), dp(4), dp(2));
+        mDiagnosticsLogText.setText("Лог событий пуст...");
+        LinearLayout.LayoutParams logP = new LinearLayout.LayoutParams(dp(180), dp(80));
+        mDiagnosticsLogText.setLayoutParams(logP);
+        mDiagnosticsLogText.setBackground(createPillDrawable(0xFF0F172A, 0xFF1E293B, dp(8)));
+        layout.addView(mDiagnosticsLogText);
+
+        // Action buttons
+        LinearLayout actionButtons = new LinearLayout(this);
+        actionButtons.setOrientation(LinearLayout.HORIZONTAL);
+        actionButtons.setGravity(Gravity.CENTER);
+        actionButtons.setPadding(0, dp(4), 0, 0);
+
+        mDiagnosticsClearBtn = new Button(this);
+        mDiagnosticsClearBtn.setText("🗑️ Очистить");
+        mDiagnosticsClearBtn.setTextSize(9);
+        mDiagnosticsClearBtn.setTextColor(0xFFE2E8F0);
+        mDiagnosticsClearBtn.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, dp(10)));
+        mDiagnosticsClearBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mDiagnosticsLog.setLength(0);
+                mDiagnosticsLogText.setText("Лог очищен");
+                vibrateFeedback(30);
+            }
+        });
+        LinearLayout.LayoutParams clearP = new LinearLayout.LayoutParams(dp(80), dp(28));
+        clearP.setMargins(0, 0, dp(4), 0);
+        actionButtons.addView(mDiagnosticsClearBtn, clearP);
+
+        mDiagnosticsExportBtn = new Button(this);
+        mDiagnosticsExportBtn.setText("📤 Сохранить");
+        mDiagnosticsExportBtn.setTextSize(9);
+        mDiagnosticsExportBtn.setTextColor(0xFF22D3EE);
+        mDiagnosticsExportBtn.setBackground(createPillDrawable(0xFF083344, 0xFF0E7490, dp(10)));
+        mDiagnosticsExportBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveDiagnosticsLog();
+                vibrateFeedback(30);
+            }
+        });
+        LinearLayout.LayoutParams exportP = new LinearLayout.LayoutParams(dp(80), dp(28));
+        actionButtons.addView(mDiagnosticsExportBtn, exportP);
+
+        layout.addView(actionButtons);
+
+        mDiagnosticsScrollView.addView(layout);
+        return mDiagnosticsScrollView;
+    }
+
+    private void updateDiagnosticsUI() {
+        if (mCurrentScreen != 4) return;
+
+        // Update statistics
+        if (mDiagnosticsStatsText != null) {
+            mDiagnosticsStatsText.setText(String.format(
+                "Следующий: %d\nПредыдущий: %d\nPlay/Pause: %d\nКулак: %d\nОшибки: %d",
+                mGestureStatsNext, mGestureStatsPrevious, mGestureStatsPlayPause,
+                mGestureStatsFist, mGestureStatsFailed
+            ));
+        }
+
+        // Update live sensors
+        if (mDiagnosticsLiveSensorsText != null) {
+            mDiagnosticsLiveSensorsText.setText(String.format(Locale.US,
+                "Гиро: X:%.2f Y:%.2f Z:%.2f\nАксель: X:%.2f Y:%.2f Z:%.2f",
+                mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz
+            ));
+        }
+    }
+
+    private void addDiagnosticLog(String message) {
+        long timestamp = System.currentTimeMillis();
+        String time = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date(timestamp));
+        mDiagnosticsLog.append("[").append(time).append("] ").append(message).append("\n");
+
+        // Keep log size manageable
+        if (mDiagnosticsLog.length() > 2000) {
+            int start = mDiagnosticsLog.indexOf("\n", 500);
+            if (start > 0) {
+                mDiagnosticsLog.delete(0, start + 1);
+            }
+        }
+
+        if (mDiagnosticsLogText != null && mCurrentScreen == 4) {
+            mDiagnosticsLogText.setText(mDiagnosticsLog.toString());
+        }
+    }
+
+    private void saveDiagnosticsLog() {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            prefs.edit().putString("diagnostics_log", mDiagnosticsLog.toString()).apply();
+            addDiagnosticLog("✅ Лог сохранён в настройках");
+        } catch (Throwable ignored) {
+            addDiagnosticLog("❌ Ошибка сохранения лога");
+        }
     }
 
     private Button createTrainingChoiceButton(String text, final Runnable action) {
@@ -1496,6 +1783,9 @@ public class MainActivity extends Activity implements SensorEventListener {
                 notifyActivationNeeded();
             }
         }
+
+        // Update diagnostics UI with sensor data
+        updateDiagnosticsUI();
     }
 
     private void processTraining(long now, float gx, float gy, float gz,
@@ -1635,6 +1925,21 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private void triggerGestureAction(final String gestureName, final String actionName, final int keycode) {
         vibrateFeedback(60);
+
+        // Update statistics
+        if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
+            mGestureStatsNext++;
+        } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
+            mGestureStatsPrevious++;
+        } else if (keycode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
+            mGestureStatsPlayPause++;
+        } else if (keycode == -1) {
+            mGestureStatsFist++;
+        }
+
+        // Add to diagnostics log
+        addDiagnosticLog("✅ " + gestureName + " -> " + actionName);
+
         if (keycode > 0) {
             sendMediaKey(keycode);
         }
@@ -1656,6 +1961,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                         }
                     }, 1200);
                 }
+                updateDiagnosticsUI();
             }
         });
     }
