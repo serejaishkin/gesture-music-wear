@@ -1464,6 +1464,19 @@ public class MainActivity extends Activity implements SensorEventListener {
         vibrateFeedback(40);
     }
 
+    private void resetTrainingState() {
+        mActiveTrainingGesture = TRAINING_NONE;
+        mTrainingFinished = false;
+        mTrainingBufferCount = 0;
+        mTrainingBufferHead = 0;
+        if (mTrainingMenuLayout != null) mTrainingMenuLayout.setVisibility(View.VISIBLE);
+        if (mTrainingActiveLayout != null) mTrainingActiveLayout.setVisibility(View.GONE);
+        if (mTrainingConfirmBtn != null) mTrainingConfirmBtn.setVisibility(View.GONE);
+        if (mWristDetector != null) mWristDetector.reset();
+        if (mPinchDetector != null) mPinchDetector.reset();
+        if (mFistDetector != null) mFistDetector.reset();
+    }
+
     private void stopGestureTraining() {
         mActiveTrainingGesture = TRAINING_NONE;
         mTrainingFinished = false;
@@ -1651,6 +1664,11 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private void switchToScreen(int screenIndex) {
         if (screenIndex < 0 || screenIndex >= NUM_SCREENS) return;
+        if (screenIndex != mCurrentScreen && mActiveTrainingGesture != TRAINING_NONE) {
+            // Otherwise processSensors keeps routing every sample to training and
+            // real gestures are never detected.
+            resetTrainingState();
+        }
         mCurrentScreen = screenIndex;
         mRotaryAccumulator = 0f;
 
@@ -1714,10 +1732,15 @@ public class MainActivity extends Activity implements SensorEventListener {
             mLastAz = event.values[2];
         }
 
-        long eventMs = event.timestamp > 0L
-                ? event.timestamp / 1_000_000L
-                : System.currentTimeMillis();
-        processSensors(eventMs, mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz);
+        // Detectors are fed once per accelerometer sample (gyro just refreshes the
+        // latest values). Feeding on every event duplicated acc samples with tiny dt,
+        // which inflated jerk in FistClenchDetector and caused phantom arming.
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            long eventMs = event.timestamp > 0L
+                    ? event.timestamp / 1_000_000L
+                    : System.currentTimeMillis();
+            processSensors(eventMs, mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz);
+        }
         updateLiveSensorsUI();
     }
 
@@ -1821,38 +1844,25 @@ public class MainActivity extends Activity implements SensorEventListener {
             || mActiveTrainingGesture == TRAINING_PINCH && value > 1.2f
             || mActiveTrainingGesture == TRAINING_FIST && value > 1.5f);
 
-        // Auto-confirm logic when motion is detected and cooldown has passed
-        if (motionDetected && now - mLastAutoConfirmTime > AUTO_CONFIRM_COOLDOWN_MS) {
-            // Find best value in recent buffer
-            float bestValue = 0f;
-            boolean bestValidDir = true;
-            for (int i = 0; i < mTrainingBufferCount; i++) {
-                int idx = (mTrainingBufferHead - 1 - i + TRAINING_BUFFER_SIZE * 2) % TRAINING_BUFFER_SIZE;
-                long age = now - mTrainingBufferTime[idx];
-                if (age < 50) continue; // Skip very recent data
-                if (age > 600) break;   // Skip too old data
-                if (mTrainingBufferValue[idx] > bestValue) {
-                    bestValue = mTrainingBufferValue[idx];
-                    bestValidDir = mTrainingBufferValidDir[idx];
-                }
-            }
-
-            // Check if gesture meets minimum threshold
-            float minThreshold;
-            if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
-                minThreshold = 60f;
-            } else if (mActiveTrainingGesture == TRAINING_PINCH) {
-                minThreshold = 1.2f;
-            } else {
-                minThreshold = 1.5f;
-            }
-
-            if (bestValue >= minThreshold && (bestValidDir || !(mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD))) {
-                // Auto-confirm the gesture
-                mLastAutoConfirmTime = now;
-                recordTrainingRepetition(bestValue, "Авто-подтверждение");
-                return;
-            }
+        // Auto-confirm: confirm directly on the sample that crosses the threshold.
+        // (Old logic only looked at samples >=50ms old, so short pinch/fist spikes
+        // never confirmed.) Wrist needs two consecutive valid samples to reject noise.
+        boolean isWristTraining = mActiveTrainingGesture == TRAINING_OUTWARD
+                || mActiveTrainingGesture == TRAINING_INWARD;
+        float minThreshold = isWristTraining ? 60f
+                : (mActiveTrainingGesture == TRAINING_PINCH ? 1.2f : 1.5f);
+        boolean prevAbove = false;
+        if (isWristTraining && mTrainingBufferCount >= 2) {
+            int prevIdx = (mTrainingBufferHead - 2 + TRAINING_BUFFER_SIZE) % TRAINING_BUFFER_SIZE;
+            prevAbove = mTrainingBufferValidDir[prevIdx]
+                    && mTrainingBufferValue[prevIdx] >= minThreshold;
+        }
+        boolean confirm = motionDetected && value >= minThreshold
+                && (!isWristTraining || prevAbove);
+        if (confirm && now - mLastAutoConfirmTime > AUTO_CONFIRM_COOLDOWN_MS) {
+            mLastAutoConfirmTime = now;
+            recordTrainingRepetition(value, "Авто-подтверждение");
+            return;
         }
 
         mMainHandler.post(new Runnable() {
@@ -2223,6 +2233,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     @Override
     protected void onPause() {
         super.onPause();
+        if (mActiveTrainingGesture != TRAINING_NONE) resetTrainingState();
         unregisterSensors();
         startGestureForegroundService();
     }

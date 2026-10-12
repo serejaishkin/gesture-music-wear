@@ -29,7 +29,7 @@ public class FistClenchDetector {
     private long settleStartTime = 0;
 
     private static final float SPREAD_THRESHOLD = 1.5f; // m/s² per axis (reduced from 2.0f)
-    private static final float JERK_THRESHOLD = 25.0f;  // m/s³ (reduced from 42.0f)
+    private static final float JERK_THRESHOLD = 40.0f;  // m/s³ (25 fired on ordinary arm motion with raw gravity)
 
     public FistClenchDetector(float clenchThreshold, long cooldownMs, float maxGyroMagnitude) {
         this.clenchThreshold = clenchThreshold;
@@ -81,7 +81,7 @@ public class FistClenchDetector {
 
         // Improved trigger conditions with lower thresholds
         boolean isHighImpulse = totalG >= clenchThreshold && isBroadSpread;
-        boolean isSharpJerk = jerk >= JERK_THRESHOLD && totalG >= clenchThreshold * 0.5f && isBroadSpread;
+        boolean isSharpJerk = jerk >= JERK_THRESHOLD && totalG >= clenchThreshold * 0.8f && isBroadSpread;
 
         // Additional condition: single-axis strong impulse (for less forceful clenches)
         boolean isStrongSingleAxis = totalG >= clenchThreshold * 1.2f && significantAxes >= 1;

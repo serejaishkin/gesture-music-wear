@@ -142,6 +142,7 @@ public class GestureForegroundService extends Service implements SensorEventList
             mLastAy = event.values[1];
             mLastAz = event.values[2];
         }
+        if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
         long eventMs = event.timestamp > 0L
                 ? event.timestamp / 1_000_000L
                 : System.currentTimeMillis();
