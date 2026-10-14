@@ -313,10 +313,20 @@ public class GestureForegroundService extends Service implements SensorEventList
     private void dispatchFallback(int keycode) {
         if (mAudioManager == null) return;
         try {
-            mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
-            mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keycode));
-        } catch (Throwable ignored) {}
+            dispatchKey(mAudioManager, keycode);
+            writeDiag("key=" + keycode + " dispatched, musicActive=" + mAudioManager.isMusicActive());
+        } catch (Throwable t) {
+            writeDiag("dispatch failed: " + t);
+        }
     }
+
+    /** Media key with real timestamps: events with eventTime=0 are dropped by many players (Yandex Music etc). */
+    private static void dispatchKey(android.media.AudioManager am, int keycode) {
+        long t = android.os.SystemClock.uptimeMillis();
+        am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_DOWN, keycode, 0));
+        am.dispatchMediaKeyEvent(new KeyEvent(t, t + 60, KeyEvent.ACTION_UP, keycode, 0));
+    }
+
 
     private void writeDiag(String diag) {
         try {

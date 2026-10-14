@@ -2079,12 +2079,22 @@ public class MainActivity extends Activity implements SensorEventListener {
         // Fallback to AudioManager dispatch
         if (mAudioManager != null) {
             try {
-                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
-                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keycode));
+                dispatchKey(mAudioManager, keycode);
                 Log.i(TAG, "AudioManager.dispatchMediaKeyEvent() called for keycode: " + keycode);
-            } catch (Throwable ignored) {}
+                writeDiag("key=" + keycode + " dispatched, musicActive=" + mAudioManager.isMusicActive());
+            } catch (Throwable t) {
+                writeDiag("dispatch failed: " + t);
+            }
         }
     }
+
+    /** Media key with real timestamps: events with eventTime=0 are dropped by many players (Yandex Music etc). */
+    private static void dispatchKey(android.media.AudioManager am, int keycode) {
+        long t = android.os.SystemClock.uptimeMillis();
+        am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_DOWN, keycode, 0));
+        am.dispatchMediaKeyEvent(new KeyEvent(t, t + 60, KeyEvent.ACTION_UP, keycode, 0));
+    }
+
 
     private void updateLiveSensorsUI() {
         if (mCurrentScreen != 3) return;
