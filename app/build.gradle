@@ -15,6 +15,7 @@ if (hasSdk) {
             targetSdk 34
             versionCode 2
             versionName "1.0.1"
+            setProperty("archivesBaseName", "gesture-music-wear")
         }
 
         buildTypes {
