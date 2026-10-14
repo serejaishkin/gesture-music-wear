@@ -53,6 +53,11 @@ public class DoublePinchDetector {
         this.cooldownMs = cooldownMs;
     }
 
+    /** pinch threshold (total g, UI scale 1.2..3.2) -> deviation from 1 g. 2.2 -> 0.30 g, 1.2 -> 0.05 g. */
+    private float dynThreshold() {
+        return Math.max(0.05f, (thresholdUp - 1.0f) * 0.25f);
+    }
+
     public int process(long timestamp, float gx, float gy, float gz,
                        float accX, float accY, float accZ) {
         float accMag = (float) Math.sqrt(accX * accX + accY * accY + accZ * accZ);
@@ -89,7 +94,11 @@ public class DoublePinchDetector {
             if (timestamp - it.next() > windowMs) it.remove();
         }
 
-        boolean isImpulse = totalG >= thresholdUp * 0.9f && totalG <= maxTotalG; // reduced threshold by 10% for better sensitivity
+        // Dynamic (gravity-removed) deviation: a pinch is a small spike around 1 g,
+        // the old absolute-g rebound (<0.6*threshold) could never be reached for low thresholds.
+        float dev = Math.abs(totalG - 1.0f);
+        float dynThr = dynThreshold();
+        boolean isImpulse = dev >= dynThr && totalG <= maxTotalG;
 
         if (state == STATE_IDLE) {
             if (isImpulse) {
@@ -97,8 +106,7 @@ public class DoublePinchDetector {
                 impulseStartTime = timestamp;
             }
         } else if (state == STATE_IMPULSE_ACTIVE) {
-            boolean isRebound = totalG < Math.abs(thresholdDown)
-                || (timestamp - impulseStartTime >= 40 && totalG < thresholdUp * 0.5f);
+            boolean isRebound = timestamp - impulseStartTime >= 20 && dev < dynThr * 0.5f;
 
             if (isRebound) {
                 pinches.add(timestamp);

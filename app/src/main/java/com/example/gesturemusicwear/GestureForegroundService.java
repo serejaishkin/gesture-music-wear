@@ -51,7 +51,7 @@ public class GestureForegroundService extends Service implements SensorEventList
     private float mLastAx = 0f, mLastAy = 0f, mLastAz = 0f;
     private long mLastGestureTimestamp = 0L;
 
-    private boolean mFistGuardEnabled = true;
+    private boolean mFistGuardEnabled = false;
     private boolean mIsArmed = false;
     private long mArmedUntilTime = 0L;
     private long mLastGuardNotifyTime = 0L;
@@ -162,7 +162,7 @@ public class GestureForegroundService extends Service implements SensorEventList
             mPinchThreshold = prefs.getFloat("pinch_thresh", 2.2f);
             mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
             mHapticsEnabled = prefs.getBoolean("haptics", true);
-            mFistGuardEnabled = prefs.getBoolean("fist_guard", true);
+            mFistGuardEnabled = prefs.getBoolean("fist_guard", false);
         } catch (Throwable ignored) {}
     }
 

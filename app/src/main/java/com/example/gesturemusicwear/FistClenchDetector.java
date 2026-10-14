@@ -29,7 +29,7 @@ public class FistClenchDetector {
     private long settleStartTime = 0;
 
     private static final float SPREAD_THRESHOLD = 1.5f; // m/s² per axis (reduced from 2.0f)
-    private static final float JERK_THRESHOLD = 40.0f;  // m/s³ (25 fired on ordinary arm motion with raw gravity)
+    private static final float JERK_THRESHOLD = 12.0f;  // m/s³, computed once per accel sample
 
     public FistClenchDetector(float clenchThreshold, long cooldownMs, float maxGyroMagnitude) {
         this.clenchThreshold = clenchThreshold;
@@ -40,6 +40,10 @@ public class FistClenchDetector {
     public void updateSettings(float clenchThreshold, long cooldownMs) {
         this.clenchThreshold = clenchThreshold;
         this.cooldownMs = cooldownMs;
+    }
+
+    private float getDynThreshold() {
+        return Math.max(0.12f, (clenchThreshold - 1.0f) * 0.25f);
     }
 
     public int process(long timestamp, float gx, float gy, float gz,
@@ -65,28 +69,14 @@ public class FistClenchDetector {
         prevAccMag = accMag;
         prevTimestamp = timestamp;
 
+        // Dynamic (gravity-removed) deviation; threshold UI scale 1.4..4.0 -> 2.2 = 0.30 g.
+        float dev = Math.abs(totalG - 1.0f);
+        float dynThr = getDynThreshold();
         if (isSettling) {
-            // Improved settling logic with longer timeout for better user experience
-            if (totalG < clenchThreshold * 0.4f || timestamp - settleStartTime > 500) {
-                isSettling = false;
-            }
+            if (dev < dynThr * 0.5f || timestamp - settleStartTime > 500) isSettling = false;
             return RESULT_NONE;
         }
-
-        int significantAxes = 0;
-        if (Math.abs(accX) > SPREAD_THRESHOLD) significantAxes++;
-        if (Math.abs(accY) > SPREAD_THRESHOLD) significantAxes++;
-        if (Math.abs(accZ) > SPREAD_THRESHOLD) significantAxes++;
-        boolean isBroadSpread = significantAxes >= 2;
-
-        // Improved trigger conditions with lower thresholds
-        boolean isHighImpulse = totalG >= clenchThreshold && isBroadSpread;
-        boolean isSharpJerk = jerk >= JERK_THRESHOLD && totalG >= clenchThreshold * 0.8f && isBroadSpread;
-
-        // Additional condition: single-axis strong impulse (for less forceful clenches)
-        boolean isStrongSingleAxis = totalG >= clenchThreshold * 1.2f && significantAxes >= 1;
-
-        if (isHighImpulse || isSharpJerk || isStrongSingleAxis) {
+        if (dev >= dynThr && jerk >= JERK_THRESHOLD) {
             lastGestureTime = timestamp;
             isSettling = true;
             settleStartTime = timestamp;

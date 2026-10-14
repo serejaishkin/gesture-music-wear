@@ -66,7 +66,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private boolean mIsArmed = false;
     private long mArmedUntilTime = 0L;
     private static final long ARM_GUARD_WINDOW_MS = 12000L; // 12 seconds active window
-    private boolean mFistGuardEnabled = true; // Protects from false positives
+    private boolean mFistGuardEnabled = false; // Protects from false positives
     private Button mSettingsFistGuardBtn;
 
     // Sensor processing state
@@ -230,7 +230,13 @@ public class MainActivity extends Activity implements SensorEventListener {
             mPinchThreshold = prefs.getFloat("pinch_thresh", 2.2f);
             mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
             mHapticsEnabled = prefs.getBoolean("haptics", true);
-            mFistGuardEnabled = prefs.getBoolean("fist_guard", true);
+            mFistGuardEnabled = prefs.getBoolean("fist_guard", false);
+            if (!prefs.getBoolean("guard_migrated_v2", false)) {
+                // Media gestures must work out of the box; fist arming is opt-in now.
+                mFistGuardEnabled = false;
+                prefs.edit().putBoolean("fist_guard", false)
+                        .putBoolean("guard_migrated_v2", true).apply();
+            }
             mAdvancedMode = prefs.getBoolean("advanced_mode", false);
             mDebugMode = prefs.getBoolean("debug_mode", false);
 
@@ -1523,17 +1529,17 @@ public class MainActivity extends Activity implements SensorEventListener {
         // Improved calibration formulas with better sensitivity ranges
         if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
             // For wrist rotation: use a more adaptive formula based on average gyro speed
-            mAngleThreshold = Math.max(20f, Math.min(70f, (avg / 3.5f) * 0.9f));
+            mAngleThreshold = Math.max(20f, Math.min(70f, (avg / 3.5f) * 0.9f)); // avg = deg/s
             resultMsg = "Порог вращения: " + ((int) mAngleThreshold) + "°";
             if (mSettingsAngleText != null) mSettingsAngleText.setText(((int) mAngleThreshold) + "°");
         } else if (mActiveTrainingGesture == TRAINING_PINCH) {
             // For pinch: more sensitive threshold calculation
-            mPinchThreshold = Math.max(1.2f, Math.min(3.2f, avg * 0.9f));
+            mPinchThreshold = Math.max(1.2f, Math.min(3.2f, 1.0f + 2.0f * Math.max(0f, avg - 1.0f)));
             resultMsg = String.format(Locale.US, "Порог щипка: %.1f g", mPinchThreshold);
             if (mSettingsPinchText != null) mSettingsPinchText.setText(String.format(Locale.US, "%.1f g", mPinchThreshold));
         } else if (mActiveTrainingGesture == TRAINING_FIST) {
             // For fist: improved threshold with better range
-            mClenchThreshold = Math.max(1.8f, Math.min(4.0f, avg * 0.9f));
+            mClenchThreshold = Math.max(1.4f, Math.min(4.0f, 1.0f + 2.0f * Math.max(0f, avg - 1.0f)));
             resultMsg = String.format(Locale.US, "Порог активации (кулак): %.1f g", mClenchThreshold);
             if (mSettingsClenchText != null) mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
         }
@@ -1838,27 +1844,21 @@ public class MainActivity extends Activity implements SensorEventListener {
         mTrainingBufferHead = (mTrainingBufferHead + 1) % TRAINING_BUFFER_SIZE;
         if (mTrainingBufferCount < TRAINING_BUFFER_SIZE) mTrainingBufferCount++;
 
-        // Improved live feedback with more appropriate thresholds
-        final boolean motionDetected = validDir && (
-            (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) && value > 60f
-            || mActiveTrainingGesture == TRAINING_PINCH && value > 1.2f
-            || mActiveTrainingGesture == TRAINING_FIST && value > 1.5f);
-
-        // Auto-confirm: confirm directly on the sample that crosses the threshold.
-        // (Old logic only looked at samples >=50ms old, so short pinch/fist spikes
-        // never confirmed.) Wrist needs two consecutive valid samples to reject noise.
-        boolean isWristTraining = mActiveTrainingGesture == TRAINING_OUTWARD
+        // Training records even tiny motions: wrist >25 deg/s, pinch/fist >0.05 g deviation from gravity.
+        final boolean isWristTraining = mActiveTrainingGesture == TRAINING_OUTWARD
                 || mActiveTrainingGesture == TRAINING_INWARD;
-        float minThreshold = isWristTraining ? 60f
-                : (mActiveTrainingGesture == TRAINING_PINCH ? 1.2f : 1.5f);
+        final float signal = isWristTraining ? value : Math.abs(value - 1.0f);
+        final float minThreshold = isWristTraining ? 25f
+                : (mActiveTrainingGesture == TRAINING_PINCH ? 0.05f : 0.06f);
+        final boolean motionDetected = validDir && signal >= minThreshold;
+
         boolean prevAbove = false;
         if (isWristTraining && mTrainingBufferCount >= 2) {
             int prevIdx = (mTrainingBufferHead - 2 + TRAINING_BUFFER_SIZE) % TRAINING_BUFFER_SIZE;
             prevAbove = mTrainingBufferValidDir[prevIdx]
                     && mTrainingBufferValue[prevIdx] >= minThreshold;
         }
-        boolean confirm = motionDetected && value >= minThreshold
-                && (!isWristTraining || prevAbove);
+        boolean confirm = motionDetected && (!isWristTraining || prevAbove);
         if (confirm && now - mLastAutoConfirmTime > AUTO_CONFIRM_COOLDOWN_MS) {
             mLastAutoConfirmTime = now;
             recordTrainingRepetition(value, "Авто-подтверждение");
