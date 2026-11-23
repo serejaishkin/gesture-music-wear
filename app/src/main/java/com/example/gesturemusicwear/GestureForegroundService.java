@@ -215,76 +215,9 @@ public class GestureForegroundService extends Service implements SensorEventList
 
     /** Mirror MainActivity.sendMediaKey: prefer MediaController, fallback AudioManager dispatch. */
     private void sendMediaKey(int keycode, int kind) {
-        boolean isToggle = kind == 3; // RESULT_PLAY_PAUSE is toggle
-        StringBuilder diag = new StringBuilder();
-        diag.append("Жест -> key=").append(keycode).append(" toggle=").append(isToggle);
-        if (!isToggle && mMediaSessionManager != null) {
-            try {
-                List<MediaController> controllers = mMediaSessionManager.getActiveSessions(null);
-                diag.append(" activeSessions=").append(controllers == null ? 0 : controllers.size());
-                if (controllers != null && !controllers.isEmpty()) {
-                    MediaController c0 = controllers.get(0);
-                    if (c0 != null) {
-                        MediaController.TransportControls tc = c0.getTransportControls();
-                        if (tc != null) {
-                            diag.append(" target=")
-                                    .append(c0.getPackageName() != null ? c0.getPackageName() : "?");
-
-                            // Check if the action is supported by the media session
-                            android.media.session.PlaybackState state = c0.getPlaybackState();
-                            if (state != null) {
-                                long actions = state.getActions();
-                                if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
-                                    if ((actions & android.media.session.PlaybackState.ACTION_SKIP_TO_NEXT) != 0) {
-                                        tc.skipToNext();
-                                        diag.append(" ->skipToNext()");
-                                        Log.i(TAG, diag.toString());
-                                        writeDiag(diag.toString());
-                                        return;
-                                    } else {
-                                        diag.append(" ->SKIP_TO_NEXT not supported");
-                                        Log.w(TAG, diag.toString());
-                                    }
-                                } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
-                                    if ((actions & android.media.session.PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0) {
-                                        tc.skipToPrevious();
-                                        diag.append(" ->skipToPrevious()");
-                                        Log.i(TAG, diag.toString());
-                                        writeDiag(diag.toString());
-                                        return;
-                                    } else {
-                                        diag.append(" ->SKIP_TO_PREVIOUS not supported");
-                                        Log.w(TAG, diag.toString());
-                                    }
-                                }
-                            } else {
-                                // Fallback if state is null
-                                if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
-                                    tc.skipToNext();
-                                    diag.append(" ->skipToNext() (no state check)");
-                                    Log.i(TAG, diag.toString());
-                                    writeDiag(diag.toString());
-                                    return;
-                                } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
-                                    tc.skipToPrevious();
-                                    diag.append(" ->skipToPrevious() (no state check)");
-                                    Log.i(TAG, diag.toString());
-                                    writeDiag(diag.toString());
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (Throwable t) {
-                Log.w(TAG, "MediaController error, falling back to AudioManager", t);
-            }
-        }
-
-        dispatchFallback(keycode);
-        diag.append(" ->AudioManager.dispatch");
-        Log.i(TAG, diag.toString());
-        writeDiag(diag.toString());
+        String result = PlayerControl.send(this, keycode);
+        Log.i(TAG, result);
+        writeDiag(result);
     }
 
     private void dispatchFallback(int keycode) {

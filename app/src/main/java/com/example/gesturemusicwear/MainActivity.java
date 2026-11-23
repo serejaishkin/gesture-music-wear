@@ -83,6 +83,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private GestureEngine mEngine;
     private final ImuRecorder mRecorder = new ImuRecorder();
     private Button mDiagnosticsRecBtn;
+    private Button mDiagnosticsAccessBtn;
     private Button mDiagnosticsLabelBtn;
     private static final String[] REC_LABELS = {"none", "outward", "inward", "pinch", "fist", "walk"};
     private int mRecLabelIdx = 0;
@@ -294,6 +295,13 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     /** Raw IMU -> CSV in getExternalFilesDir()/imu; pull with: adb pull /sdcard/Android/data/<pkg>/files/imu */
+    private void updateAccessButton() {
+        if (mDiagnosticsAccessBtn != null) {
+            mDiagnosticsAccessBtn.setText(PlayerControl.hasListenerAccess(this)
+                    ? "🔔 Доступ к плееру: ДА" : "🔔 Доступ к плееру: НЕТ");
+        }
+    }
+
     private void toggleRecording() {
         if (mRecorder.isRecording()) {
             mRecorder.stop();
@@ -1407,8 +1415,27 @@ public class MainActivity extends Activity implements SensorEventListener {
         labelP.setMargins(dp(6), 0, 0, 0);
         recButtons.addView(mDiagnosticsLabelBtn, labelP);
 
+        mDiagnosticsAccessBtn = new Button(this);
+        updateAccessButton();
+        mDiagnosticsAccessBtn.setTextSize(9);
+        mDiagnosticsAccessBtn.setTextColor(0xFFE2E8F0);
+        mDiagnosticsAccessBtn.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, dp(10)));
+        mDiagnosticsAccessBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                vibrateFeedback(30);
+                try {
+                    startActivity(new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+                } catch (Throwable t) {
+                    addDiagnosticLog("Нет экрана доступа на часах. Выдать с ПК: " + PlayerControl.adbGrantCommand(MainActivity.this));
+                }
+            }
+        });
+        LinearLayout.LayoutParams accP = new LinearLayout.LayoutParams(dp(180), dp(28));
+        accP.setMargins(0, dp(4), 0, 0);
         layout.addView(actionButtons);
         layout.addView(recButtons);
+        layout.addView(mDiagnosticsAccessBtn, accP);
 
         mDiagnosticsScrollView.addView(layout);
         return mDiagnosticsScrollView;
@@ -2061,78 +2088,11 @@ public class MainActivity extends Activity implements SensorEventListener {
      * - PLAY/PAUSE: prefer AudioManager.dispatchMediaKeyEvent (system toggle, knows real state).
      */
     private void sendMediaKey(final int keycode) {
-        boolean isToggle = keycode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
-                        || keycode == KeyEvent.KEYCODE_MEDIA_PLAY
-                        || keycode == KeyEvent.KEYCODE_MEDIA_PAUSE;
-
-        if (!isToggle && mMediaSessionManager != null) {
-            try {
-                List<MediaController> controllers = mMediaSessionManager.getActiveSessions(null);
-                if (controllers != null && !controllers.isEmpty()) {
-                    MediaController controller = controllers.get(0);
-                    if (controller != null) {
-                        MediaController.TransportControls tc = controller.getTransportControls();
-                        if (tc != null) {
-                            // Check if the action is supported by the media session
-                            android.media.session.PlaybackState state = controller.getPlaybackState();
-                            if (state != null) {
-                                long actions = state.getActions();
-                                if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
-                                    if ((actions & android.media.session.PlaybackState.ACTION_SKIP_TO_NEXT) != 0) {
-                                        tc.skipToNext();
-                                        Log.i(TAG, "MediaController.skipToNext() called");
-                                        return;
-                                    } else {
-                                        Log.w(TAG, "SKIP_TO_NEXT not supported by media session");
-                                    }
-                                } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
-                                    if ((actions & android.media.session.PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0) {
-                                        tc.skipToPrevious();
-                                        Log.i(TAG, "MediaController.skipToPrevious() called");
-                                        return;
-                                    } else {
-                                        Log.w(TAG, "SKIP_TO_PREVIOUS not supported by media session");
-                                    }
-                                }
-                            } else {
-                                // Fallback if state is null
-                                if (keycode == KeyEvent.KEYCODE_MEDIA_NEXT) {
-                                    tc.skipToNext();
-                                    Log.i(TAG, "MediaController.skipToNext() called (no state check)");
-                                    return;
-                                } else if (keycode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
-                                    tc.skipToPrevious();
-                                    Log.i(TAG, "MediaController.skipToPrevious() called (no state check)");
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (Throwable t) {
-                Log.w(TAG, "MediaController error, falling back to AudioManager", t);
-            }
-        }
-
-        // Fallback to AudioManager dispatch
-        if (mAudioManager != null) {
-            try {
-                dispatchKey(mAudioManager, keycode);
-                Log.i(TAG, "AudioManager.dispatchMediaKeyEvent() called for keycode: " + keycode);
-                writeDiag("key=" + keycode + " dispatched, musicActive=" + mAudioManager.isMusicActive());
-            } catch (Throwable t) {
-                writeDiag("dispatch failed: " + t);
-            }
-        }
+        String result = PlayerControl.send(this, keycode);
+        Log.i(TAG, result);
+        writeDiag(result);
+        addDiagnosticLog(result);
     }
-
-    /** Media key with real timestamps: events with eventTime=0 are dropped by many players (Yandex Music etc). */
-    private static void dispatchKey(android.media.AudioManager am, int keycode) {
-        long t = android.os.SystemClock.uptimeMillis();
-        am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_DOWN, keycode, 0));
-        am.dispatchMediaKeyEvent(new KeyEvent(t, t + 60, KeyEvent.ACTION_UP, keycode, 0));
-    }
-
 
     private void updateLiveSensorsUI() {
         if (mCurrentScreen != 3) return;
@@ -2272,6 +2232,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     protected void onResume() {
         super.onResume();
         stopGestureForegroundService();
+        updateAccessButton();
         if (mRootLayout != null) {
             mRootLayout.requestFocus();
         }
