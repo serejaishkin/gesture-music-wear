@@ -43,6 +43,7 @@ public class GestureForegroundService extends Service implements SensorEventList
     private Sensor mGyroscope;
     private Sensor mAccelerometer;
 
+    private GestureEngine mEngine;
     private WristRotationDetector mWristDetector;
     private DoublePinchDetector mPinchDetector;
     private FistClenchDetector mFistDetector;
@@ -167,64 +168,40 @@ public class GestureForegroundService extends Service implements SensorEventList
     }
 
     private void initDetectors() {
-        mWristDetector = new WristRotationDetector(
-            mAngleThreshold, 0.8f, 100, 1000, GESTURE_COOLDOWN_MS, // Reduced minAngularSpeed from 1.2f to 0.8f, adjusted duration
-            800, 0.25f, 200, 35.0f, mIsLeftHand // Reduced idleThreshold from 0.35f to 0.25f, increased idleTimeout
-        );
-        mWristDetector.updateSettings(mAngleThreshold, GESTURE_COOLDOWN_MS, mIsLeftHand, 100, 1000); // Updated duration parameters
-        mPinchDetector = new DoublePinchDetector(
-            mPinchThreshold, -(mPinchThreshold * 0.6f), 4.0f, 900, GESTURE_COOLDOWN_MS, 2.5f
-        );
-        mPinchDetector.updateSettings(mPinchThreshold, GESTURE_COOLDOWN_MS);
-        mFistDetector = new FistClenchDetector(mClenchThreshold, 1200, 2.2f); // increased maxGyroMagnitude from 1.8f to 2.2f
+        mEngine = new GestureEngine(mAngleThreshold, mPinchThreshold, mClenchThreshold,
+                mIsLeftHand, mFistGuardEnabled);
+        mWristDetector = mEngine.wrist();
+        mPinchDetector = mEngine.pinch();
+        mFistDetector = mEngine.fist();
+        mWristDetector.updateSettings(mAngleThreshold, GestureEngine.GESTURE_COOLDOWN_MS, mIsLeftHand, 100, 1000);
+        mPinchDetector.updateSettings(mPinchThreshold, GestureEngine.GESTURE_COOLDOWN_MS);
         mFistDetector.updateSettings(mClenchThreshold, 1200);
     }
 
     private synchronized void processSensors(long now, float gx, float gy, float gz,
                                              float ax, float ay, float az) {
-        if (now - mLastGestureTimestamp < CROSS_GESTURE_DEBOUNCE_MS) return;
-
-        if (mFistGuardEnabled) {
-            int fist = mFistDetector.process(now, gx, gy, gz, ax, ay, az);
-            if (fist == FistClenchDetector.RESULT_ACTIVATE) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+        if (mEngine == null) return;
+        mEngine.setFistGuard(mFistGuardEnabled);
+        switch (mEngine.process(now, gx, gy, gz, ax, ay, az)) {
+            case GestureEngine.FIST_ARM:
                 vibrateDoublePulse();
                 writeDiag("Жест: сжатие кулака -> активация (12с)");
                 Log.i(TAG, "Сжатие кулака -> активация (фон)");
-                return;
-            }
-        }
-
-        boolean canExecuteMedia = !mFistGuardEnabled || (mIsArmed && now <= mArmedUntilTime);
-        if (canExecuteMedia) {
-            int wrist = mWristDetector.process(now, gx, gy, gz, ax, ay, az);
-            if (wrist == WristRotationDetector.RESULT_NEXT) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+                break;
+            case GestureEngine.NEXT:
                 triggerGestureAction("Вращение наружу", "Следующий трек",
                         KeyEvent.KEYCODE_MEDIA_NEXT, 1);
-                return;
-            } else if (wrist == WristRotationDetector.RESULT_PREVIOUS) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+                break;
+            case GestureEngine.PREVIOUS:
                 triggerGestureAction("Вращение внутрь", "Предыдущий трек",
                         KeyEvent.KEYCODE_MEDIA_PREVIOUS, 2);
-                return;
-            }
-
-            int pinch = mPinchDetector.process(now, gx, gy, gz, ax, ay, az);
-            if (pinch == DoublePinchDetector.RESULT_PLAY_PAUSE) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+                break;
+            case GestureEngine.PLAY_PAUSE:
                 triggerGestureAction("Двойной щипок", "Пауза/Воспроизведение",
                         KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, 3);
-                return;
-            }
+                break;
+            default:
+                break;
         }
     }
 

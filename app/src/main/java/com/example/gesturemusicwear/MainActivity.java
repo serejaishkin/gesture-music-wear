@@ -80,6 +80,12 @@ public class MainActivity extends Activity implements SensorEventListener {
     private long mLastGuardNotifyTime = 0L;
 
     // Gesture detectors
+    private GestureEngine mEngine;
+    private final ImuRecorder mRecorder = new ImuRecorder();
+    private Button mDiagnosticsRecBtn;
+    private Button mDiagnosticsLabelBtn;
+    private static final String[] REC_LABELS = {"none", "outward", "inward", "pinch", "fist", "walk"};
+    private int mRecLabelIdx = 0;
     private WristRotationDetector mWristDetector;
     private DoublePinchDetector mPinchDetector;
     private FistClenchDetector mFistDetector;
@@ -280,17 +286,29 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void initDetectors() {
-        mWristDetector = new WristRotationDetector(
-            mAngleThreshold, 0.8f, 100, 1000, GESTURE_COOLDOWN_MS, // Reduced minAngularSpeed from 1.2f to 0.8f, adjusted duration
-            800, 0.25f, 200, 35.0f, mIsLeftHand // Reduced idleThreshold from 0.35f to 0.25f, increased idleTimeout
-        );
-        mPinchDetector = new DoublePinchDetector(
-            mPinchThreshold, -(mPinchThreshold * 0.6f),
-            4.0f, 900, GESTURE_COOLDOWN_MS, 2.5f
-        );
-        mFistDetector = new FistClenchDetector(
-            mClenchThreshold, 1200, 2.2f // increased maxGyroMagnitude from 1.8f to 2.2f
-        );
+        mEngine = new GestureEngine(mAngleThreshold, mPinchThreshold, mClenchThreshold,
+                mIsLeftHand, mFistGuardEnabled);
+        mWristDetector = mEngine.wrist();
+        mPinchDetector = mEngine.pinch();
+        mFistDetector = mEngine.fist();
+    }
+
+    /** Raw IMU -> CSV in getExternalFilesDir()/imu; pull with: adb pull /sdcard/Android/data/<pkg>/files/imu */
+    private void toggleRecording() {
+        if (mRecorder.isRecording()) {
+            mRecorder.stop();
+            mDiagnosticsRecBtn.setText("⏺ REC");
+            addDiagnosticLog("REC стоп: " + mRecorder.getSamples() + " сэмплов, " + mRecorder.getFile());
+        } else {
+            java.io.File dir = new java.io.File(getExternalFilesDir(null), "imu");
+            mRecorder.setLabel(REC_LABELS[mRecLabelIdx]);
+            if (mRecorder.start(dir)) {
+                mDiagnosticsRecBtn.setText("⏹ СТОП");
+                addDiagnosticLog("REC старт: " + mRecorder.getFile());
+            } else {
+                addDiagnosticLog("REC: не удалось создать файл в " + dir);
+            }
+        }
     }
 
     private void updateDetectors() {
@@ -1352,7 +1370,45 @@ public class MainActivity extends Activity implements SensorEventListener {
         LinearLayout.LayoutParams exportP = new LinearLayout.LayoutParams(dp(80), dp(28));
         actionButtons.addView(mDiagnosticsExportBtn, exportP);
 
+        LinearLayout recButtons = new LinearLayout(this);
+        recButtons.setOrientation(LinearLayout.HORIZONTAL);
+        recButtons.setGravity(Gravity.CENTER);
+        recButtons.setPadding(0, dp(4), 0, 0);
+
+        mDiagnosticsRecBtn = new Button(this);
+        mDiagnosticsRecBtn.setText("⏺ REC");
+        mDiagnosticsRecBtn.setTextSize(9);
+        mDiagnosticsRecBtn.setTextColor(0xFFF87171);
+        mDiagnosticsRecBtn.setBackground(createPillDrawable(0xFF3B0A0A, 0xFF7F1D1D, dp(10)));
+        mDiagnosticsRecBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleRecording();
+                vibrateFeedback(30);
+            }
+        });
+        recButtons.addView(mDiagnosticsRecBtn, new LinearLayout.LayoutParams(dp(80), dp(28)));
+
+        mDiagnosticsLabelBtn = new Button(this);
+        mDiagnosticsLabelBtn.setText("метка: none");
+        mDiagnosticsLabelBtn.setTextSize(9);
+        mDiagnosticsLabelBtn.setTextColor(0xFFE2E8F0);
+        mDiagnosticsLabelBtn.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, dp(10)));
+        mDiagnosticsLabelBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mRecLabelIdx = (mRecLabelIdx + 1) % REC_LABELS.length;
+                mRecorder.setLabel(REC_LABELS[mRecLabelIdx]);
+                mDiagnosticsLabelBtn.setText("метка: " + REC_LABELS[mRecLabelIdx]);
+                vibrateFeedback(20);
+            }
+        });
+        LinearLayout.LayoutParams labelP = new LinearLayout.LayoutParams(dp(96), dp(28));
+        labelP.setMargins(dp(6), 0, 0, 0);
+        recButtons.addView(mDiagnosticsLabelBtn, labelP);
+
         layout.addView(actionButtons);
+        layout.addView(recButtons);
 
         mDiagnosticsScrollView.addView(layout);
         return mDiagnosticsScrollView;
@@ -1745,6 +1801,9 @@ public class MainActivity extends Activity implements SensorEventListener {
             long eventMs = event.timestamp > 0L
                     ? event.timestamp / 1_000_000L
                     : System.currentTimeMillis();
+            if (mRecorder.isRecording()) {
+                mRecorder.write(eventMs, mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz);
+            }
             processSensors(eventMs, mLastGx, mLastGy, mLastGz, mLastAx, mLastAy, mLastAz);
         }
         updateLiveSensorsUI();
@@ -1769,52 +1828,31 @@ public class MainActivity extends Activity implements SensorEventListener {
             return;
         }
 
-        if (now - mLastGestureTimestamp < CROSS_GESTURE_DEBOUNCE_MS) return;
-
-        if (mFistGuardEnabled) {
-            int fist = mFistDetector.process(now, gx, gy, gz, ax, ay, az);
-            if (fist == FistClenchDetector.RESULT_ACTIVATE) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+        mEngine.setFistGuard(mFistGuardEnabled);
+        switch (mEngine.process(now, gx, gy, gz, ax, ay, az)) {
+            case GestureEngine.FIST_ARM:
                 vibrateDoublePulse();
                 triggerGestureAction("Сжатие кулака", "🔓 Взведено (12с)", -1);
                 return;
-            }
-        }
-
-        boolean canExecuteMedia = !mFistGuardEnabled || (mIsArmed && now <= mArmedUntilTime);
-        if (canExecuteMedia) {
-            int wrist = mWristDetector.process(now, gx, gy, gz, ax, ay, az);
-            if (wrist == WristRotationDetector.RESULT_NEXT) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+            case GestureEngine.NEXT:
                 triggerGestureAction("Вращение наружу", "Следующий трек", KeyEvent.KEYCODE_MEDIA_NEXT);
                 return;
-            } else if (wrist == WristRotationDetector.RESULT_PREVIOUS) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+            case GestureEngine.PREVIOUS:
                 triggerGestureAction("Вращение внутрь", "Предыдущий трек", KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                 return;
-            }
-
-            int pinch = mPinchDetector.process(now, gx, gy, gz, ax, ay, az);
-            if (pinch == DoublePinchDetector.RESULT_PLAY_PAUSE) {
-                mLastGestureTimestamp = now;
-                mIsArmed = true;
-                mArmedUntilTime = now + ARM_GUARD_WINDOW_MS;
+            case GestureEngine.PLAY_PAUSE:
                 mIsPlaying = !mIsPlaying;
                 if (mPlayerPlayPauseBtn != null) mPlayerPlayPauseBtn.setText(mIsPlaying ? "⏸" : "▶");
                 triggerGestureAction("Двойной щипок", mIsPlaying ? "Воспроизведение" : "Пауза", KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
                 return;
-            }
-        } else if (mFistGuardEnabled && (!mIsArmed || now > mArmedUntilTime)) {
-            if (now - mLastGuardNotifyTime > 2000) {
-                mLastGuardNotifyTime = now;
-                notifyActivationNeeded();
-            }
+            case GestureEngine.ACTIVATION_NEEDED:
+                if (now - mLastGuardNotifyTime > 2000) {
+                    mLastGuardNotifyTime = now;
+                    notifyActivationNeeded();
+                }
+                break;
+            default:
+                break;
         }
 
         // Update diagnostics UI with sensor data
@@ -2244,6 +2282,10 @@ public class MainActivity extends Activity implements SensorEventListener {
     protected void onPause() {
         super.onPause();
         if (mActiveTrainingGesture != TRAINING_NONE) resetTrainingState();
+        if (mRecorder.isRecording()) {
+            mRecorder.stop();
+            writeDiag("REC остановлена: " + mRecorder.getFile());
+        }
         unregisterSensors();
         startGestureForegroundService();
     }
