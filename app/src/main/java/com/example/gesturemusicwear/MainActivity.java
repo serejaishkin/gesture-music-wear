@@ -231,25 +231,19 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void loadPreferences() {
+        GestureSettings g = GestureSettings.load(this);
+        mSensorsActive = g.active;
+        mIsLeftHand = g.leftHand;
+        mAngleThreshold = g.angleThreshold;
+        mPinchThreshold = g.pinchThreshold;
+        mClenchThreshold = g.clenchThreshold;
+        mHapticsEnabled = g.haptics;
+        mFistGuardEnabled = g.fistGuard;
+        mOnlyWhenPlaying = g.onlyWhenPlaying;
+        mAdvancedMode = g.advancedMode;
+        mDebugMode = g.debugMode;
         try {
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            mSensorsActive = prefs.getBoolean("active", true);
-            mIsLeftHand = prefs.getBoolean("left_hand", true);
-            mAngleThreshold = prefs.getFloat("angle_thresh", 35f); // Reduced default from 45f to 35f for better sensitivity
-            mPinchThreshold = prefs.getFloat("pinch_thresh", 2.2f);
-            mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
-            mHapticsEnabled = prefs.getBoolean("haptics", true);
-            mFistGuardEnabled = prefs.getBoolean("fist_guard", false);
-            if (!prefs.getBoolean("guard_migrated_v2", false)) {
-                // Media gestures must work out of the box; fist arming is opt-in now.
-                mFistGuardEnabled = false;
-                prefs.edit().putBoolean("fist_guard", false)
-                        .putBoolean("guard_migrated_v2", true).apply();
-            }
-            mOnlyWhenPlaying = prefs.getBoolean("only_when_playing", false);
-            mAdvancedMode = prefs.getBoolean("advanced_mode", false);
-            mDebugMode = prefs.getBoolean("debug_mode", false);
-
             // Load diagnostics log
             String savedLog = prefs.getString("diagnostics_log", "");
             if (!savedLog.isEmpty()) {
@@ -266,26 +260,25 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void savePreferences() {
+        GestureSettings g = new GestureSettings();
+        g.active = mSensorsActive;
+        g.leftHand = mIsLeftHand;
+        g.angleThreshold = mAngleThreshold;
+        g.pinchThreshold = mPinchThreshold;
+        g.clenchThreshold = mClenchThreshold;
+        g.haptics = mHapticsEnabled;
+        g.fistGuard = mFistGuardEnabled;
+        g.onlyWhenPlaying = mOnlyWhenPlaying;
+        g.advancedMode = mAdvancedMode;
+        g.debugMode = mDebugMode;
+        g.save(this);
         try {
             SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-            editor.putBoolean("active", mSensorsActive);
-            editor.putBoolean("left_hand", mIsLeftHand);
-            editor.putFloat("angle_thresh", mAngleThreshold);
-            editor.putFloat("pinch_thresh", mPinchThreshold);
-            editor.putFloat("clench_thresh", mClenchThreshold);
-            editor.putBoolean("haptics", mHapticsEnabled);
-            editor.putBoolean("fist_guard", mFistGuardEnabled);
-            editor.putBoolean("only_when_playing", mOnlyWhenPlaying);
-            editor.putBoolean("advanced_mode", mAdvancedMode);
-            editor.putBoolean("debug_mode", mDebugMode);
-
-            // Save statistics
             editor.putInt("stats_next", mGestureStatsNext);
             editor.putInt("stats_previous", mGestureStatsPrevious);
             editor.putInt("stats_playpause", mGestureStatsPlayPause);
             editor.putInt("stats_fist", mGestureStatsFist);
             editor.putInt("stats_failed", mGestureStatsFailed);
-
             editor.apply();
         } catch (Throwable ignored) {}
     }
@@ -1640,17 +1633,17 @@ public class MainActivity extends Activity implements SensorEventListener {
         // Improved calibration formulas with better sensitivity ranges
         if (mActiveTrainingGesture == TRAINING_OUTWARD || mActiveTrainingGesture == TRAINING_INWARD) {
             // For wrist rotation: use a more adaptive formula based on average gyro speed
-            mAngleThreshold = Math.max(20f, Math.min(70f, (avg / 3.5f) * 0.9f)); // avg = deg/s
+            mAngleThreshold = TrainingCalibrator.angleThreshold(avg); // avg = deg/s
             resultMsg = "Порог вращения: " + ((int) mAngleThreshold) + "°";
             if (mSettingsAngleText != null) mSettingsAngleText.setText(((int) mAngleThreshold) + "°");
         } else if (mActiveTrainingGesture == TRAINING_PINCH) {
             // For pinch: more sensitive threshold calculation
-            mPinchThreshold = Math.max(1.2f, Math.min(3.2f, 1.0f + 2.0f * Math.max(0f, avg - 1.0f)));
+            mPinchThreshold = TrainingCalibrator.pinchThreshold(avg);
             resultMsg = String.format(Locale.US, "Порог щипка: %.1f g", mPinchThreshold);
             if (mSettingsPinchText != null) mSettingsPinchText.setText(String.format(Locale.US, "%.1f g", mPinchThreshold));
         } else if (mActiveTrainingGesture == TRAINING_FIST) {
             // For fist: improved threshold with better range
-            mClenchThreshold = Math.max(1.4f, Math.min(4.0f, 1.0f + 2.0f * Math.max(0f, avg - 1.0f)));
+            mClenchThreshold = TrainingCalibrator.clenchThreshold(avg);
             resultMsg = String.format(Locale.US, "Порог активации (кулак): %.1f g", mClenchThreshold);
             if (mSettingsClenchText != null) mSettingsClenchText.setText(String.format(Locale.US, "%.1f g", mClenchThreshold));
         }
@@ -2047,24 +2040,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void vibrateDoublePulse() {
-        if (!mHapticsEnabled) {
-            Log.w(TAG, "Haptics disabled in settings");
-            return;
-        }
-        try {
-            Vibrator v = getVibrator();
-            if (v == null || !v.hasVibrator()) {
-                Log.e(TAG, "Device reports no vibrator");
-                return;
-            }
-            if (v != null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    v.vibrate(VibrationEffect.createWaveform(new long[]{0, 50, 60, 80}, -1));
-                    return;
-                }
-            }
-        } catch (Throwable ignored) {}
-        vibrateFeedback(90);
+        if (mHapticsEnabled) Haptics.doublePulse(this);
     }
 
     private void triggerGestureAction(final String gestureName, final String actionName, final int keycode) {
@@ -2154,37 +2130,9 @@ public class MainActivity extends Activity implements SensorEventListener {
     // HAPTIC FEEDBACK & CLOCK
     // ==========================================
     private void vibrateFeedback(long milliseconds) {
-        if (!mHapticsEnabled) {
-            Log.w(TAG, "Haptics disabled in settings");
-            return;
-        }
-        try {
-            Vibrator v = getVibrator();
-            if (v == null || !v.hasVibrator()) {
-                Log.e(TAG, "No vibrator reported by device");
-                return;
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v.vibrate(VibrationEffect.createOneShot(
-                        milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
-            } else {
-                v.vibrate(milliseconds);
-            }
-        } catch (Throwable t) {
-            Log.e(TAG, "Vibration failed", t);
-        }
+        if (mHapticsEnabled) Haptics.pulse(this, milliseconds);
     }
 
-    @SuppressWarnings("deprecation")
-    private Vibrator getVibrator() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                VibratorManager vm = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-                if (vm != null) return vm.getDefaultVibrator();
-            }
-        } catch (Throwable ignored) {}
-        return (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-    }
 
     private void startClockUpdater() {
         mMainHandler.postDelayed(new Runnable() {

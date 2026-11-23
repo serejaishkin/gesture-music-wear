@@ -158,17 +158,15 @@ public class GestureForegroundService extends Service implements SensorEventList
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     private void loadSettings() {
-        try {
-            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            mSensorsActive = prefs.getBoolean("active", true);
-            mIsLeftHand = prefs.getBoolean("left_hand", true);
-            mAngleThreshold = prefs.getFloat("angle_thresh", 35f); // Reduced default from 45f to 35f for better sensitivity
-            mPinchThreshold = prefs.getFloat("pinch_thresh", 2.2f);
-            mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
-            mHapticsEnabled = prefs.getBoolean("haptics", true);
-            mFistGuardEnabled = prefs.getBoolean("fist_guard", false);
-            mOnlyWhenPlaying = prefs.getBoolean("only_when_playing", false);
-        } catch (Throwable ignored) {}
+        GestureSettings g = GestureSettings.load(this);
+        mSensorsActive = g.active;
+        mIsLeftHand = g.leftHand;
+        mAngleThreshold = g.angleThreshold;
+        mPinchThreshold = g.pinchThreshold;
+        mClenchThreshold = g.clenchThreshold;
+        mHapticsEnabled = g.haptics;
+        mFistGuardEnabled = g.fistGuard;
+        mOnlyWhenPlaying = g.onlyWhenPlaying;
     }
 
     private void initDetectors() {
@@ -259,25 +257,10 @@ public class GestureForegroundService extends Service implements SensorEventList
     }
 
     private void vibrateDoublePulse() {
-        if (!mHapticsEnabled) return;
-        try {
-            Vibrator v = getVibrator();
-            if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v.vibrate(VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE));
-            }
-        } catch (Throwable ignored) {}
+        if (mHapticsEnabled) Haptics.doublePulse(this);
     }
 
     @SuppressWarnings("deprecation")
-    private Vibrator getVibrator() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                VibratorManager vm = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-                if (vm != null) return vm.getDefaultVibrator();
-            }
-        } catch (Throwable ignored) {}
-        return (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-    }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;

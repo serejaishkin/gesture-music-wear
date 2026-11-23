@@ -331,3 +331,21 @@ README проекта описывает:
    - требует проверки на реальных часах;
    - реально протестировано.
 
+
+## Обновление 2026-11-23 (ветка refactor/engine-recorder)
+
+Новая структура (поведение жестов то же, что в main после d2fcec9):
+
+- `GestureEngine` — чистый Java (без Android): детекторы, cross-gesture debounce, fist-arming. Используют `MainActivity` и `GestureForegroundService`. Детекторы доступны через `engine.wrist()/pinch()/fist()`.
+- `GestureSettings` — единственное место ключей/дефолтов/миграций SharedPreferences («GestureWearPrefs»), читают и Activity, и сервис. fist_guard по умолчанию **выключен** (миграция guard_migrated_v2).
+- `PlayerControl` + `MediaListenerService` — команды реальной медиасессии (нужен доступ к уведомлениям); fallback — медиаклавиши с настоящими timestamp. Каждая команда пишется в журнал.
+- `ImuRecorder` + кнопки REC/метка на экране «Диагностика» — сырые IMU в CSV; `tools/replay.sh` гоняет CSV через движок на ПК (docs/RECORDING.md).
+- `TrainingCalibrator` — чистая функция «среднее обучения → порог».
+- `Haptics` — вибрация для Activity и сервиса.
+- Режим «В фоне: только при музыке» (`only_when_playing`) — сервис игнорирует движения, пока `AudioManager.isMusicActive()==false`.
+- Тесты: `tools/selftest.sh` (синтетика, без Android SDK); CI `.github/workflows/build.yml` (selftest + assembleDebug).
+
+Правила работы поверх старых: правки через ветку и PR, не напрямую в main; перед PR гонять `tools/selftest.sh`; не смешивать независимые подсистемы в одном коммите.
+
+Не сделано (нужны реальные записи): нормальная фильтрация гравитации, калибровка по негативному классу, тонкая настройка порогов.
+Не сделано сознательно: разнесение UI `MainActivity` по отдельным классам экранов — без запуска на устройстве риск регрессий выше пользы.
