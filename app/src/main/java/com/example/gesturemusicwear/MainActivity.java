@@ -82,6 +82,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     // Gesture detectors
     private GestureEngine mEngine;
     private final ImuRecorder mRecorder = new ImuRecorder();
+    private boolean mOnlyWhenPlaying = false;
+    private Button mSettingsOnlyPlayingBtn;
     private Button mDiagnosticsRecBtn;
     private Button mDiagnosticsAccessBtn;
     private Button mDiagnosticsLabelBtn;
@@ -244,6 +246,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                 prefs.edit().putBoolean("fist_guard", false)
                         .putBoolean("guard_migrated_v2", true).apply();
             }
+            mOnlyWhenPlaying = prefs.getBoolean("only_when_playing", false);
             mAdvancedMode = prefs.getBoolean("advanced_mode", false);
             mDebugMode = prefs.getBoolean("debug_mode", false);
 
@@ -272,6 +275,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             editor.putFloat("clench_thresh", mClenchThreshold);
             editor.putBoolean("haptics", mHapticsEnabled);
             editor.putBoolean("fist_guard", mFistGuardEnabled);
+            editor.putBoolean("only_when_playing", mOnlyWhenPlaying);
             editor.putBoolean("advanced_mode", mAdvancedMode);
             editor.putBoolean("debug_mode", mDebugMode);
 
@@ -885,6 +889,25 @@ public class MainActivity extends Activity implements SensorEventListener {
         guardHint.setPadding(0, 0, 0, dp(6));
         layout.addView(guardHint);
 
+        // Background service listens only while music is playing (saves battery, fewer phantoms)
+        mSettingsOnlyPlayingBtn = new Button(this);
+        updateOnlyPlayingButtonText();
+        mSettingsOnlyPlayingBtn.setTextSize(10);
+        mSettingsOnlyPlayingBtn.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, dp(15)));
+        mSettingsOnlyPlayingBtn.setTextColor(0xFFE2E8F0);
+        mSettingsOnlyPlayingBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mOnlyWhenPlaying = !mOnlyWhenPlaying;
+                savePreferences();
+                updateOnlyPlayingButtonText();
+                vibrateFeedback(40);
+            }
+        });
+        LinearLayout.LayoutParams onlyP = new LinearLayout.LayoutParams(dp(180), dp(32));
+        onlyP.setMargins(0, dp(4), 0, dp(6));
+        layout.addView(mSettingsOnlyPlayingBtn, onlyP);
+
         // Haptic feedback toggle
         mSettingsHapticBtn = new Button(this);
         updateHapticButtonText();
@@ -1063,6 +1086,11 @@ public class MainActivity extends Activity implements SensorEventListener {
     private void updateHapticButtonText() {
         if (mSettingsHapticBtn == null) return;
         mSettingsHapticBtn.setText(mHapticsEnabled ? "Виброотклик: ВКЛ" : "Виброотклик: ВЫКЛ");
+    }
+
+    private void updateOnlyPlayingButtonText() {
+        if (mSettingsOnlyPlayingBtn == null) return;
+        mSettingsOnlyPlayingBtn.setText(mOnlyWhenPlaying ? "🎵 В фоне: только при музыке" : "🎵 В фоне: всегда");
     }
 
     private void updateFistGuardButtonText() {

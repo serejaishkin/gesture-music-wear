@@ -44,6 +44,9 @@ public class GestureForegroundService extends Service implements SensorEventList
     private Sensor mAccelerometer;
 
     private GestureEngine mEngine;
+    private boolean mOnlyWhenPlaying = false;
+    private boolean mMusicActive = true;
+    private long mMusicCheckedAt = 0L;
     private WristRotationDetector mWristDetector;
     private DoublePinchDetector mPinchDetector;
     private FistClenchDetector mFistDetector;
@@ -164,6 +167,7 @@ public class GestureForegroundService extends Service implements SensorEventList
             mClenchThreshold = prefs.getFloat("clench_thresh", 2.2f); // reduced from 3.0f
             mHapticsEnabled = prefs.getBoolean("haptics", true);
             mFistGuardEnabled = prefs.getBoolean("fist_guard", false);
+            mOnlyWhenPlaying = prefs.getBoolean("only_when_playing", false);
         } catch (Throwable ignored) {}
     }
 
@@ -181,6 +185,15 @@ public class GestureForegroundService extends Service implements SensorEventList
     private synchronized void processSensors(long now, float gx, float gy, float gz,
                                              float ax, float ay, float az) {
         if (mEngine == null) return;
+        if (mOnlyWhenPlaying) {
+            // isMusicActive() is a binder call: re-check at most once per second.
+            if (now - mMusicCheckedAt > 1000) {
+                mMusicCheckedAt = now;
+                try { mMusicActive = mAudioManager == null || mAudioManager.isMusicActive(); }
+                catch (Throwable t) { mMusicActive = true; }
+            }
+            if (!mMusicActive) return;
+        }
         mEngine.setFistGuard(mFistGuardEnabled);
         switch (mEngine.process(now, gx, gy, gz, ax, ay, az)) {
             case GestureEngine.FIST_ARM:
