@@ -38,8 +38,19 @@ public final class PlayerControl {
         StringBuilder d = new StringBuilder("key=").append(keycode);
         try {
             MediaSessionManager msm = (MediaSessionManager) ctx.getSystemService(Context.MEDIA_SESSION_SERVICE);
-            List<MediaController> list = msm.getActiveSessions(new ComponentName(ctx, MediaListenerService.class));
+            List<MediaController> list;
+            boolean noAccess = false;
+            try {
+                list = msm.getActiveSessions(new ComponentName(ctx, MediaListenerService.class));
+            } catch (SecurityException e) {
+                // Notification access not granted. Some OEMs still allow a null-component lookup.
+                noAccess = true;
+                try { list = msm.getActiveSessions(null); } catch (Throwable t) { list = null; }
+            }
             d.append(" sessions=").append(list == null ? 0 : list.size());
+            if (noAccess && (list == null || list.isEmpty())) {
+                d.append(" НЕТ ДОСТУПА К УВЕДОМЛЕНИЯМ");
+            }
             MediaController target = pick(list);
             if (target != null) {
                 PlaybackState st = target.getPlaybackState();

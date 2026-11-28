@@ -84,6 +84,12 @@ public class GestureForegroundService extends Service implements SensorEventList
             stopSelf();
             return START_NOT_STICKY;
         }
+        // Reload settings on every start: the service may already be running from a previous
+        // session, and the user may have changed thresholds / fist-guard / only-when-playing
+        // in the app. Without this the background service keeps stale settings (e.g. fist-guard
+        // stuck on, which blocks all media gestures until a fist clench).
+        loadSettings();
+        initDetectors();
         if (mSensorsActive) registerSensors();
         return START_STICKY;
     }
