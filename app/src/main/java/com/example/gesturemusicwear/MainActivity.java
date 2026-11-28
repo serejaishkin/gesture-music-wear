@@ -12,16 +12,11 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
-import android.media.session.MediaController;
-import android.media.session.MediaSessionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
-import android.os.VibratorManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -63,20 +58,15 @@ public class MainActivity extends Activity implements SensorEventListener {
     private boolean mDebugMode = false;       // Debug mode for detailed logging
 
     // False trigger protection via Fist Activation (Взведение / Активация жестом кулака)
-    private boolean mIsArmed = false;
-    private long mArmedUntilTime = 0L;
-    private static final long ARM_GUARD_WINDOW_MS = 12000L; // 12 seconds active window
     private boolean mFistGuardEnabled = false; // Protects from false positives
     private Button mSettingsFistGuardBtn;
 
     // Sensor processing state
     private float mLastGx = 0f, mLastGy = 0f, mLastGz = 0f;
     private float mLastAx = 0f, mLastAy = 0f, mLastAz = 0f;
-    private long mLastGestureTimestamp = 0L;
     private long mSensorEventCount = 0L;
     private boolean mSensorRegistrationOk = false;
     private static final long GESTURE_COOLDOWN_MS = 650L;
-    private static final long CROSS_GESTURE_DEBOUNCE_MS = 300L;
     private long mLastGuardNotifyTime = 0L;
 
     // Gesture detectors
@@ -95,7 +85,6 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     // Audio manager for real media control
     private AudioManager mAudioManager;
-    private MediaSessionManager mMediaSessionManager;
     private boolean mIsPlaying = false;
 
     // UI state: 5 screens
@@ -207,7 +196,6 @@ public class MainActivity extends Activity implements SensorEventListener {
             initDetectors();
 
             mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            mMediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
             mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
             if (mSensorManager != null) {
                 mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -721,14 +709,10 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private void dispatchMediaAction(int keycode, String actionName) {
         vibrateFeedback(45);
-        if (mAudioManager != null) {
-            try {
-                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
-                mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keycode));
-            } catch (Throwable t) {
-                Log.w(TAG, "Media dispatch error: ", t);
-            }
-        }
+        String result = PlayerControl.send(this, keycode);
+        Log.i(TAG, result);
+        writeDiag(result);
+        addDiagnosticLog(result);
         if (mTileLastGestureText != null) {
             mTileLastGestureText.setText("Жест: " + actionName);
         }
@@ -1597,7 +1581,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private void recordTrainingRepetition(float val, final String name) {
-        mLastGestureTimestamp = SystemClock.elapsedRealtime();
         mTrainingRepsCompleted++;
         mTrainingAccumulatedSum += val;
         vibrateFeedback(60);

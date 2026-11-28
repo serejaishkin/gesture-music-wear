@@ -19,8 +19,8 @@ public class ImuRecorder {
     private long samples;
 
     public boolean isRecording() { synchronized (lock) { return out != null; } }
-    public File getFile() { return file; }
-    public long getSamples() { return samples; }
+    public File getFile() { synchronized (lock) { return file; } }
+    public long getSamples() { synchronized (lock) { return samples; } }
     public String getLabel() { return label; }
     public void setLabel(String label) { this.label = (label == null || label.isEmpty()) ? "none" : label; }
 

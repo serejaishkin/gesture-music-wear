@@ -13,21 +13,13 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
-import android.media.session.MediaController;
-import android.media.session.MediaSessionManager;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.SystemClock;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
-import android.os.VibratorManager;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import android.content.pm.ServiceInfo;
 import android.util.Log;
 import android.view.KeyEvent;
-
-import java.util.List;
 
 public class GestureForegroundService extends Service implements SensorEventListener {
     private static final String TAG = "GestureWearSrv";
@@ -35,9 +27,6 @@ public class GestureForegroundService extends Service implements SensorEventList
     private static final String PREFS_NAME = "GestureWearPrefs";
 
     private static final long GESTURE_COOLDOWN_MS = 650L;
-    private static final long CROSS_GESTURE_DEBOUNCE_MS = 300L;
-    private static final long ARM_GUARD_WINDOW_MS = 12000L;
-    private static final long ARM_GUARD_NOTIFY_MS = 2000L;
 
     private SensorManager mSensorManager;
     private Sensor mGyroscope;
@@ -53,12 +42,8 @@ public class GestureForegroundService extends Service implements SensorEventList
 
     private float mLastGx = 0f, mLastGy = 0f, mLastGz = 0f;
     private float mLastAx = 0f, mLastAy = 0f, mLastAz = 0f;
-    private long mLastGestureTimestamp = 0L;
 
     private boolean mFistGuardEnabled = false;
-    private boolean mIsArmed = false;
-    private long mArmedUntilTime = 0L;
-    private long mLastGuardNotifyTime = 0L;
 
     private boolean mSensorsActive = true;
     private boolean mHapticsEnabled = true;
@@ -68,7 +53,6 @@ public class GestureForegroundService extends Service implements SensorEventList
     private float mClenchThreshold = 2.2f; // reduced from 3.0f for better detection
 
     private AudioManager mAudioManager;
-    private MediaSessionManager mMediaSessionManager;
 
     @Override
     public void onCreate() {
@@ -81,7 +65,6 @@ public class GestureForegroundService extends Service implements SensorEventList
             mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        mMediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
 
         createNotificationChannel();
     }
@@ -201,51 +184,32 @@ public class GestureForegroundService extends Service implements SensorEventList
                 break;
             case GestureEngine.NEXT:
                 triggerGestureAction("Вращение наружу", "Следующий трек",
-                        KeyEvent.KEYCODE_MEDIA_NEXT, 1);
+                        KeyEvent.KEYCODE_MEDIA_NEXT);
                 break;
             case GestureEngine.PREVIOUS:
                 triggerGestureAction("Вращение внутрь", "Предыдущий трек",
-                        KeyEvent.KEYCODE_MEDIA_PREVIOUS, 2);
+                        KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                 break;
             case GestureEngine.PLAY_PAUSE:
                 triggerGestureAction("Двойной щипок", "Пауза/Воспроизведение",
-                        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, 3);
+                        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
                 break;
             default:
                 break;
         }
     }
 
-    private void triggerGestureAction(String gestureName, String actionName,
-                                      int keycode, int kind) {
+    private void triggerGestureAction(String gestureName, String actionName, int keycode) {
         vibrateDoublePulse();
-        sendMediaKey(keycode, kind);
+        sendMediaKey(keycode);
         writeDiag("Жест: " + gestureName + " -> " + actionName);
         Log.i(TAG, actionName);
     }
 
-    /** Mirror MainActivity.sendMediaKey: prefer MediaController, fallback AudioManager dispatch. */
-    private void sendMediaKey(int keycode, int kind) {
+    private void sendMediaKey(int keycode) {
         String result = PlayerControl.send(this, keycode);
         Log.i(TAG, result);
         writeDiag(result);
-    }
-
-    private void dispatchFallback(int keycode) {
-        if (mAudioManager == null) return;
-        try {
-            dispatchKey(mAudioManager, keycode);
-            writeDiag("key=" + keycode + " dispatched, musicActive=" + mAudioManager.isMusicActive());
-        } catch (Throwable t) {
-            writeDiag("dispatch failed: " + t);
-        }
-    }
-
-    /** Media key with real timestamps: events with eventTime=0 are dropped by many players (Yandex Music etc). */
-    private static void dispatchKey(android.media.AudioManager am, int keycode) {
-        long t = android.os.SystemClock.uptimeMillis();
-        am.dispatchMediaKeyEvent(new KeyEvent(t, t, KeyEvent.ACTION_DOWN, keycode, 0));
-        am.dispatchMediaKeyEvent(new KeyEvent(t, t + 60, KeyEvent.ACTION_UP, keycode, 0));
     }
 
 
@@ -259,8 +223,6 @@ public class GestureForegroundService extends Service implements SensorEventList
     private void vibrateDoublePulse() {
         if (mHapticsEnabled) Haptics.doublePulse(this);
     }
-
-    @SuppressWarnings("deprecation")
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;

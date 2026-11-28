@@ -38,7 +38,7 @@ public class Replay {
                 }
             }
         }
-        System.out.println("\nlabel            NEXT PREV PLAY FIST");
+        System.out.println("\nlabel            NEXT PREV PLAY FIST_ARM");
         for (Map.Entry<String, int[]> en : summary.entrySet()) {
             int[] c = en.getValue();
             System.out.printf("%-15s %5d %4d %4d %4d%n", en.getKey(), c[1], c[2], c[3], c[4]);

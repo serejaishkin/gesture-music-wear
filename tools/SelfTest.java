@@ -51,7 +51,7 @@ public class SelfTest {
         for (int i = 0; i < 15; i++) feed((float) (-4.0 * Math.sin(Math.PI * i / 14)), 9.81f);
         idle(100);
         check(count == 0, "fist guard on: wrist ignored until armed");
-    
+
         check(TrainingCalibrator.pinchThreshold(1.0f) == 1.2f, "calibrator: no deviation -> min pinch threshold");
         check(Math.abs(TrainingCalibrator.pinchThreshold(1.5f) - 2.0f) < 1e-4, "calibrator: 1.5 g peak -> pinch 2.0");
         check(TrainingCalibrator.angleThreshold(1000f) == 70f && TrainingCalibrator.angleThreshold(1f) == 20f, "calibrator: angle clamped 20..70");
